@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asia Source iCollege Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ========== LOGIN PAGE ========== -->
+<div id="loginPage" class="lp-wrapper">
+  <button class="dm-toggle" id="dmToggle" onclick="toggleDark()" title="Toggle dark mode">
+    <span class="dm-sun">☀️</span>
+    <span class="dm-track"><span class="dm-thumb"></span></span>
+    <span class="dm-moon">🌙</span>
+  </button>
+
+  <div class="lp-left">
+    <div class="lp-glow"></div>
+    <div class="lp-grid"></div>
+    <div class="lp-content">
+      <div class="lp-badge"><span class="lp-dot"></span> Accredited Learning Institution</div>
+      <img class="lp-logo" src="logo.png" alt="Logo" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)';this.style.display='flex'">
+      <h1 class="lp-title">ASIA SOURCE<br><em>iCOLLEGE</em></h1>
+      <p class="lp-sub">Student &amp; Faculty Portal</p>
+      <div class="lp-rule"></div>
+      <p class="lp-desc">Empowering tomorrow's leaders through quality education, innovation, and excellence.</p>
+      <div class="lp-stats">
+        <div class="lp-stat"><span class="ls-num">5+</span><span class="ls-lbl">Strands</span></div>
+        <div class="lp-stat"><span class="ls-num">100%</span><span class="ls-lbl">Accredited</span></div>
+        <div class="lp-stat"><span class="ls-num">24/7</span><span class="ls-lbl">Access</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lp-right">
+    <div class="lp-card">
+      <div class="lp-card-head">
+        <img class="lp-card-logo" src="logo.png" alt="Logo" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
+        <div>
+          <div class="lp-card-title">Asia Source <span>iCollege</span></div>
+          <div class="lp-card-sub">Welcome back</div>
+        </div>
+      </div>
+      <div class="lp-stripe"></div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuth('login')">Log In</button>
+        <button class="auth-tab" id="tabSignup" onclick="switchAuth('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="authLogin">
+        <div class="role-toggle">
+          <button class="role-btn active" id="btnStudent" onclick="setRole('student')">🎓 Student</button>
+          <button class="role-btn" id="btnTeacher" onclick="setRole('teacher')">👩‍🏫 Teacher</button>
+        </div>
+        <div class="alert hidden" id="alertBox"></div>
+        <form onsubmit="handleLogin(event)">
+          <div class="fg">
+            <label>School Email</label>
+            <div class="email-wrap">
+              <input type="text" id="userId" class="email-input" placeholder="yourname" required
+                oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
+              <span class="email-sfx">@asiasourceicollege.edu.ph</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Password <span class="hint-lbl">(Birthday: YYYY-MM-DD)</span></label>
+            <div class="pw-wrap">
+              <input type="password" id="password" placeholder="e.g. 2008-03-15" required>
+              <button type="button" class="pw-eye" onclick="togglePass('password')">👁</button>
+            </div>
+          </div>
+          <div class="fg-extras">
+            <label class="check-lbl"><input type="checkbox"> Remember me</label>
+            <a href="#" class="link-gold">Forgot password?</a>
+          </div>
+          <button type="submit" class="btn-red" id="loginBtn">Sign In as Student</button>
+        </form>
+        <div class="demo-box">
+          <div class="demo-title">Demo Accounts</div>
+          <div class="demo-row"><span>🎓 Student email:</span><span>juan.delacruz</span></div>
+          <div class="demo-row"><span>Password:</span><span>2008-03-15</span></div>
+          <div class="demo-divider"></div>
+          <div class="demo-row"><span>👩‍🏫 Teacher email:</span><span>ana.santos</span></div>
+          <div class="demo-row"><span>Password:</span><span>1985-06-12</span></div>
+          <div class="demo-note">⚠ Format: YYYY-MM-DD</div>
+        </div>
+      </div>
+
+      <!-- SIGN UP FORM -->
+      <div id="authSignup" class="hidden">
+        <div class="role-toggle">
+          <button class="role-btn active" id="suBtnStu" onclick="setSuRole('student')">🎓 Student</button>
+          <button class="role-btn" id="suBtnTch" onclick="setSuRole('teacher')">👩‍🏫 Teacher</button>
+        </div>
+        <div class="alert hidden" id="suAlert"></div>
+        <div class="alert success hidden" id="suSuccess"></div>
+        <form onsubmit="handleSignUp(event)">
+          <div class="fg">
+            <label>Full Name</label>
+            <input type="text" id="suName" class="plain-input" placeholder="e.g. Maria Santos" required>
+          </div>
+          <div class="fg">
+            <label>School Email</label>
+            <div class="email-wrap">
+              <input type="text" id="suEmail" class="email-input" placeholder="yourname" required
+                oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
+              <span class="email-sfx">@asiasourceicollege.edu.ph</span>
+            </div>
+          </div>
+          <div class="fg" id="suBdayFg">
+            <label>Birthday <span class="hint-lbl">(this becomes your password — YYYY-MM-DD)</span></label>
+            <input type="date" id="suBirthday" class="plain-input">
+          </div>
+          <div class="fg" id="suStrandFg">
+            <label>Grade, Strand &amp; Section</label>
+            <select id="suStrand" class="plain-input">
+              <option value="">Select your section</option>
+              <optgroup label="GRADE 11">
+                <option value="G11-HUMSS-A">G11 | HUMSS | Section A</option>
+                <option value="G11-HUMSS-B">G11 | HUMSS | Section B</option>
+                <option value="G11-STEM-A">G11 | STEM | Section A</option>
+                <option value="G11-STEM-B">G11 | STEM | Section B</option>
+                <option value="G11-HEHO-A">G11 | H.E-H.O | Section A</option>
+                <option value="G11-HEHO-B">G11 | H.E-H.O | Section B</option>
+                <option value="G11-ICT-A">G11 | ICT-CP | Section A</option>
+                <option value="G11-ICT-B">G11 | ICT-CP | Section B</option>
+                <option value="G11-ABM-A">G11 | ABM | Section A</option>
+                <option value="G11-ABM-B">G11 | ABM | Section B</option>
+              </optgroup>
+              <optgroup label="GRADE 12">
+                <option value="G12-HUMSS-A">G12 | HUMSS | Section A</option>
+                <option value="G12-HUMSS-B">G12 | HUMSS | Section B</option>
+                <option value="G12-STEM-A">G12 | STEM | Section A</option>
+                <option value="G12-STEM-B">G12 | STEM | Section B</option>
+                <option value="G12-HEHO-A">G12 | H.E-H.O | Section A</option>
+                <option value="G12-HEHO-B">G12 | H.E-H.O | Section B</option>
+                <option value="G12-ICT-A">G12 | ICT-CP | Section A</option>
+                <option value="G12-ICT-B">G12 | ICT-CP | Section B</option>
+                <option value="G12-ABM-A">G12 | ABM | Section A</option>
+                <option value="G12-ABM-B">G12 | ABM | Section B</option>
+              </optgroup>
+            </select>
+          </div>
+          <button type="submit" class="btn-red">Create Account</button>
+        </form>
+        <p class="auth-switch">Already have an account?
+          <a href="#" class="link-gold" onclick="switchAuth('login');return false;">Log In</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== STUDENT DASHBOARD ========== -->
+<div id="studentDash" class="page hidden">
+  <nav class="dash-nav">
+    <div class="dash-brand"><img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege</div>
+    <div class="nav-right">
+      <button class="dm-nav-btn" onclick="toggleDark()"><span id="dmNavIcon">🌙</span></button>
+      <div class="user-pill"><div class="uavatar">S</div><span id="stuName">Student</span></div>
+      <button class="btn-logout" onclick="logout()">Log Out</button>
+    </div>
+  </nav>
+  <div class="dash-body">
+    <div class="stu-layout">
+      <aside class="stu-sidebar">
+        <div class="profile-card">
+          <div class="pc-avatar">🎓</div>
+          <div class="pc-name" id="stuProfileName">Student</div>
+          <div class="pc-badge" id="stuProfileStrand">-</div>
+          <div class="pc-email" id="stuProfileEmail">-</div>
+          <div class="pc-row"><span>Birthday:</span><span id="stuProfileBday">-</span></div>
+          <div class="pc-row"><span>Email:</span><span id="stuProfileLRN">-</span></div>
+        </div>
+      </aside>
+      <div class="stu-main">
+        <div class="sec-title">📚 My Subjects</div>
+        <div id="subjectList" class="subject-list"></div>
+        <div class="sec-title">📋 Grade Card</div>
+        <div class="grade-card">
+          <table class="grade-table">
+            <thead><tr><th>Subject</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Final</th><th>Remarks</th></tr></thead>
+            <tbody id="gradeCardBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TEACHER DASHBOARD ========== -->
+<div id="teacherDash" class="page hidden">
+  <nav class="dash-nav">
+    <div class="dash-brand"><img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege</div>
+    <div class="nav-right">
+      <button class="dm-nav-btn" onclick="toggleDark()"><span id="dmNavIcon2">🌙</span></button>
+      <div class="user-pill"><div class="uavatar t">T</div><span id="tchName">Teacher</span></div>
+      <button class="btn-logout" onclick="logout()">Log Out</button>
+    </div>
+  </nav>
+  <div class="dash-body">
+    <div class="tch-layout">
+
+      <!-- SIDEBAR -->
+      <aside class="tch-sidebar">
+        <div class="profile-card">
+          <div class="pc-avatar">👩‍🏫</div>
+          <div class="pc-name" id="tchProfileName">Teacher</div>
+          <div class="pc-badge">Faculty</div>
+          <div class="pc-email" id="tchProfileEmail">-</div>
+        </div>
+        <div class="sidebar-section-lbl">Strand Folders</div>
+        <div class="strand-list" id="strandList">
+          <div class="strand-item active" data-strand="HUMSS" onclick="openFolder(this)">
+            <span class="si-icon">📁</span>
+            <div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div>
+          </div>
+          <div class="strand-item" data-strand="STEM" onclick="openFolder(this)">
+            <span class="si-icon">📁</span>
+            <div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div>
+          </div>
+          <div class="strand-item" data-strand="HE-HO" onclick="openFolder(this)">
+            <span class="si-icon">📁</span>
+            <div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div>
+          </div>
+          <div class="strand-item" data-strand="ICT" onclick="openFolder(this)">
+            <span class="si-icon">📁</span>
+            <div><div class="si-name">ICT - CP</div><div class="si-sub">Section A &amp; B</div></div>
+          </div>
+          <div class="strand-item" data-strand="ABM" onclick="openFolder(this)">
+            <span class="si-icon">📁</span>
+            <div><div class="si-name">ABM</div><div class="si-sub">Section A &amp; B</div></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <div class="tch-main">
+        <div class="tch-header">
+          <div class="tch-header-left">
+            <div class="tch-folder-title" id="folderTitle">HUMSS — Student List</div>
+            <div class="tch-folder-sub">Select quarter or subject, enter grades, then save.</div>
+          </div>
+          <div class="tch-header-right">
+            <div class="view-tabs">
+              <button class="vtab active" id="vtabGradebook" onclick="setView('gradebook',this)">📊 Gradebook</button>
+              <button class="vtab" id="vtabClassRec" onclick="setView('classrecord',this)">📋 Class Record</button>
+              <button class="vtab" id="vtabAttend" onclick="setView('attendance',this)">📅 Attendance</button>
+            </div>
+            <div class="sec-tabs">
+              <button class="stab active" onclick="switchSection('A',this)">Section A</button>
+              <button class="stab" onclick="switchSection('B',this)">Section B</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── GRADEBOOK VIEW ── -->
+        <div id="viewGradebook" class="tch-view">
+          <!-- Quarter toolbar injected here by JS -->
+          <div id="gbToolbar" class="view-toolbar"></div>
+          <div class="cr-scroll-wrap">
+            <table class="gb-table">
+              <thead>
+                <tr>
+                  <th class="gb-num">#</th>
+                  <th class="gb-name">Student Name</th>
+                  <th>WW /30</th>
+                  <th>PT /30</th>
+                  <th>QE /40</th>
+                  <th>Activity /20</th>
+                  <th>Computed Grade</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="gbBody"></tbody>
+            </table>
+          </div>
+          <div class="legend-bar">
+            <span>90–100: Outstanding</span><span>85–89: Very Satisfactory</span>
+            <span>80–84: Satisfactory</span><span>75–79: Fairly Satisfactory</span>
+            <span>Below 75: Did Not Meet Expectations</span>
+          </div>
+        </div>
+
+        <!-- ── CLASS RECORD VIEW ── -->
+        <div id="viewClassRecord" class="tch-view hidden">
+          <!-- Subject toolbar injected here by JS -->
+          <div id="crToolbar" class="view-toolbar"></div>
+          <div class="cr-scroll-wrap">
+            <table class="cr-table">
+              <!-- thead is built dynamically -->
+              <thead id="crHead"></thead>
+              <tbody id="crBody"></tbody>
+            </table>
+          </div>
+          <div class="legend-bar">
+            <span>90–100: Outstanding</span><span>85–89: Very Satisfactory</span>
+            <span>80–84: Satisfactory</span><span>75–79: Fairly Satisfactory</span>
+            <span>Below 75: Did Not Meet Expectations</span>
+          </div>
+        </div>
+
+        <!-- ── ATTENDANCE VIEW ── -->
+        <div id="viewAttendance" class="tch-view hidden">
+          <div class="att-legend">
+            <span class="att-key att-p">P = Present</span>
+            <span class="att-key att-a">A = Absent</span>
+            <span class="att-key att-l">L = Late</span>
+            <span class="att-hint">Type P, A, or L in each cell</span>
+          </div>
+          <div class="cr-scroll-wrap">
+            <table class="cr-table">
+              <thead>
+                <tr id="attMonthRow"></tr>
+                <tr id="attDayRow"></tr>
+              </thead>
+              <tbody id="attBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- end tch-main -->
+    </div>
+  </div>
+</div>
+
+<!-- ========== SUBJECT MODAL ========== -->
+<div class="modal-overlay hidden" id="subjectModal" onclick="if(event.target===this)closeSubjectModal()">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeSubjectModal()">✕</button>
+    <h3 class="modal-title" id="subjectModalTitle">Subject</h3>
+    <p class="modal-sub" id="subjectModalSub"></p>
+    <div id="subjectModalContent"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
