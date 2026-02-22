@@ -60,11 +60,6 @@
 
   <div class="lp-right">
     <canvas id="loginBgCanvas" class="login-bg-canvas"></canvas>
-    <button class="dm-toggle" id="dmToggle" onclick="toggleDark()" title="Toggle theme">
-      <span id="dmIconLeft">🌙</span>
-      <div class="dm-track"><div class="dm-thumb"></div></div>
-      <span id="dmLabel">Dark</span>
-    </button>
     <div class="lp-card">
       <div class="lp-card-head">
         <img class="lp-card-logo" src="logo.png" alt="" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
@@ -314,11 +309,24 @@
         </div>
         <div class="sidebar-section-lbl">Strand Folders</div>
         <div class="strand-list" id="strandList">
-          <div class="strand-item active" data-strand="HUMSS" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div></div>
-          <div class="strand-item" data-strand="STEM" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div></div>
-          <div class="strand-item" data-strand="HE-HO" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div></div>
-          <div class="strand-item" data-strand="ICT" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div></div>
-          <div class="strand-item" data-strand="ABM" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div></div>
+          <!-- GRADE 11 -->
+          <div class="gl-folder-group">
+            <div class="gl-folder-hdr gl-g11">🔵 Grade 11</div>
+            <div class="strand-item active" data-strand="HUMSS" data-grade="G11" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-11">G11</span></div>
+            <div class="strand-item" data-strand="STEM" data-grade="G11" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-11">G11</span></div>
+            <div class="strand-item" data-strand="HE-HO" data-grade="G11" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-11">G11</span></div>
+            <div class="strand-item" data-strand="ICT" data-grade="G11" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div><span class="si-gl-badge si-gl-11">G11</span></div>
+            <div class="strand-item" data-strand="ABM" data-grade="G11" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div><span class="si-gl-badge si-gl-11">G11</span></div>
+          </div>
+          <!-- GRADE 12 -->
+          <div class="gl-folder-group">
+            <div class="gl-folder-hdr gl-g12">🟢 Grade 12</div>
+            <div class="strand-item" data-strand="HUMSS" data-grade="G12" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-12">G12</span></div>
+            <div class="strand-item" data-strand="STEM" data-grade="G12" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-12">G12</span></div>
+            <div class="strand-item" data-strand="HE-HO" data-grade="G12" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div><span class="si-gl-badge si-gl-12">G12</span></div>
+            <div class="strand-item" data-strand="ICT" data-grade="G12" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div><span class="si-gl-badge si-gl-12">G12</span></div>
+            <div class="strand-item" data-strand="ABM" data-grade="G12" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div><span class="si-gl-badge si-gl-12">G12</span></div>
+          </div>
         </div>
       </aside>
       <div class="tch-main">
