@@ -5,59 +5,127 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Asia Source iCollege Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- ========== LOGIN PAGE ========== -->
+<!-- ══ 3D ANIMATED BACKGROUND ══ -->
+<div class="portal-bg" id="portalBg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="particles" id="particles"></div>
+</div>
+
+<!-- ══════ LOGIN PAGE ══════ -->
 <div id="loginPage" class="lp-wrapper">
-  <button class="dm-toggle" id="dmToggle" onclick="toggleDark()" title="Toggle dark mode">
-    <span class="dm-sun">☀️</span>
-    <span class="dm-track"><span class="dm-thumb"></span></span>
-    <span class="dm-moon">🌙</span>
-  </button>
 
+  <!-- ══ LEFT PANEL — Branding ══ -->
   <div class="lp-left">
-    <div class="lp-glow"></div>
-    <div class="lp-grid"></div>
-    <div class="lp-content">
-      <div class="lp-badge"><span class="lp-dot"></span> Accredited Learning Institution</div>
-      <img class="lp-logo" src="logo.png" alt="Logo" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)';this.style.display='flex'">
-      <h1 class="lp-title">ASIA SOURCE<br><em>iCOLLEGE</em></h1>
-      <p class="lp-sub">Student &amp; Faculty Portal</p>
-      <div class="lp-rule"></div>
-      <p class="lp-desc">Empowering tomorrow's leaders through quality education, innovation, and excellence.</p>
-      <div class="lp-stats">
-        <div class="lp-stat"><span class="ls-num">5+</span><span class="ls-lbl">Strands</span></div>
-        <div class="lp-stat"><span class="ls-num">100%</span><span class="ls-lbl">Accredited</span></div>
-        <div class="lp-stat"><span class="ls-num">24/7</span><span class="ls-lbl">Access</span></div>
-      </div>
-    </div>
-  </div>
+    <div class="lp-left-inner">
 
-  <div class="lp-right">
-    <div class="lp-card">
-      <div class="lp-card-head">
-        <img class="lp-card-logo" src="logo.png" alt="Logo" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
-        <div>
-          <div class="lp-card-title">Asia Source <span>iCollege</span></div>
-          <div class="lp-card-sub">Welcome back</div>
+      <!-- Logo with 3D orbit -->
+      <div class="lp-logo-wrap">
+        <div class="logo-orbit-3"></div>
+        <div class="logo-orbit-2"></div>
+        <div class="logo-orbit"></div>
+        <div class="logo-hex-bg"></div>
+        <img class="lp-logo-3d" src="logo.png" alt="AS"
+          onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)';this.alt='AS'">
+      </div>
+
+      <!-- School Name -->
+      <h1 class="lp-title">ASIA SOURCE<em>iCOLLEGE</em></h1>
+
+      <!-- Accredited badge -->
+      <div class="lp-badge"><span class="lp-dot"></span> Accredited Learning Institution</div>
+
+      <div class="lp-divider"></div>
+
+      <!-- ★ MOTTO ★ -->
+      <div class="lp-motto-wrap">
+        <div class="lp-motto-deco lp-motto-deco-left">"</div>
+        <p class="lp-motto">Your Success<br><span class="lp-motto-accent">is Our Goal</span></p>
+        <div class="lp-motto-deco lp-motto-deco-right">"</div>
+        <div class="lp-motto-underline"></div>
+        <p class="lp-motto-sub">— Asia Source iCollege</p>
+      </div>
+
+      <div class="lp-divider" style="margin-top:28px;margin-bottom:22px;"></div>
+
+      <!-- Stats -->
+      <div class="lp-stats">
+        <div class="lp-stat">
+          <span class="ls-num">5+</span>
+          <span class="ls-lbl">Strands</span>
+        </div>
+        <div class="lp-stat">
+          <span class="ls-num">100%</span>
+          <span class="ls-lbl">Accredited</span>
+        </div>
+        <div class="lp-stat">
+          <span class="ls-num">24/7</span>
+          <span class="ls-lbl">Access</span>
         </div>
       </div>
-      <div class="lp-stripe"></div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="switchAuth('login')">Log In</button>
-        <button class="auth-tab" id="tabSignup" onclick="switchAuth('signup')">Sign Up</button>
+
+      <!-- Decorative bottom flourish -->
+      <div class="lp-bottom-deco">
+        <div class="lp-deco-line"></div>
+        <div class="lp-deco-diamonds">
+          <span class="lp-deco-diamond"></span>
+          <span class="lp-deco-diamond lp-deco-diamond--lg"></span>
+          <span class="lp-deco-diamond"></span>
+        </div>
+        <div class="lp-deco-line"></div>
       </div>
 
-      <!-- LOGIN FORM -->
+    </div><!-- end lp-left-inner -->
+  </div><!-- end lp-left -->
+
+  <!-- ══ RIGHT PANEL — Login Form ══ -->
+  <div class="lp-right">
+    <!-- Animated geometric background canvas -->
+    <canvas id="loginBgCanvas" class="login-bg-canvas"></canvas>
+
+    <!-- Dark mode toggle -->
+    <button class="dm-toggle" id="dmToggle" onclick="toggleDark()" title="Toggle theme">
+      <span id="dmIconLeft">🌙</span>
+      <div class="dm-track"><div class="dm-thumb"></div></div>
+      <span id="dmLabel">Dark</span>
+    </button>
+
+    <div class="lp-card">
+
+      <!-- Card Header -->
+      <div class="lp-card-head">
+        <img class="lp-card-logo" src="logo.png" alt=""
+          onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
+        <div>
+          <div class="lp-card-title">Asia Source <span>iCollege</span></div>
+          <div class="lp-card-sub">Welcome! Please sign in to continue.</div>
+        </div>
+      </div>
+
+      <!-- Top accent stripe -->
+      <div class="lp-stripe"></div>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuth('login')">🔑 Log In</button>
+        <button class="auth-tab" id="tabSignup" onclick="switchAuth('signup')">✨ Sign Up</button>
+      </div>
+
+      <!-- ── LOGIN FORM ── -->
       <div id="authLogin">
         <div class="role-toggle">
           <button class="role-btn active" id="btnStudent" onclick="setRole('student')">🎓 Student</button>
           <button class="role-btn" id="btnTeacher" onclick="setRole('teacher')">👩‍🏫 Teacher</button>
         </div>
+
         <div class="alert hidden" id="alertBox"></div>
+
         <form onsubmit="handleLogin(event)">
           <div class="fg">
             <label>School Email</label>
@@ -67,38 +135,53 @@
               <span class="email-sfx">@asiasourceicollege.edu.ph</span>
             </div>
           </div>
+
           <div class="fg">
-            <label>Password <span class="hint-lbl">(Birthday: YYYY-MM-DD)</span></label>
+            <label>Password <span class="hint-lbl">— Your birthday (YYYY-MM-DD)</span></label>
             <div class="pw-wrap">
               <input type="password" id="password" placeholder="e.g. 2008-03-15" required>
               <button type="button" class="pw-eye" onclick="togglePass('password')">👁</button>
             </div>
           </div>
+
           <div class="fg-extras">
             <label class="check-lbl"><input type="checkbox"> Remember me</label>
             <a href="#" class="link-gold">Forgot password?</a>
           </div>
+
           <button type="submit" class="btn-red" id="loginBtn">Sign In as Student</button>
         </form>
-        <div class="demo-box">
-          <div class="demo-title">Demo Accounts</div>
-          <div class="demo-row"><span>🎓 Student email:</span><span>juan.delacruz</span></div>
-          <div class="demo-row"><span>Password:</span><span>2008-03-15</span></div>
-          <div class="demo-divider"></div>
-          <div class="demo-row"><span>👩‍🏫 Teacher email:</span><span>ana.santos</span></div>
-          <div class="demo-row"><span>Password:</span><span>1985-06-12</span></div>
-          <div class="demo-note">⚠ Format: YYYY-MM-DD</div>
-        </div>
-      </div>
 
-      <!-- SIGN UP FORM -->
+        <!-- Demo accounts -->
+        <div class="demo-box">
+          <div class="demo-title">📋 Demo Accounts</div>
+          <div class="demo-cols">
+            <div class="demo-col">
+              <div class="demo-col-label">🎓 Student</div>
+              <div class="demo-row"><span>Email</span><span>juan.delacruz</span></div>
+              <div class="demo-row"><span>Password</span><span>2008-03-15</span></div>
+            </div>
+            <div class="demo-col-sep"></div>
+            <div class="demo-col">
+              <div class="demo-col-label">👩‍🏫 Teacher</div>
+              <div class="demo-row"><span>Email</span><span>ana.santos</span></div>
+              <div class="demo-row"><span>Password</span><span>1985-06-12</span></div>
+            </div>
+          </div>
+          <div class="demo-note">⚠ Password format is YYYY-MM-DD (your birthday)</div>
+        </div>
+      </div><!-- end authLogin -->
+
+      <!-- ── SIGN UP FORM ── -->
       <div id="authSignup" class="hidden">
         <div class="role-toggle">
           <button class="role-btn active" id="suBtnStu" onclick="setSuRole('student')">🎓 Student</button>
           <button class="role-btn" id="suBtnTch" onclick="setSuRole('teacher')">👩‍🏫 Teacher</button>
         </div>
+
         <div class="alert hidden" id="suAlert"></div>
         <div class="alert success hidden" id="suSuccess"></div>
+
         <form onsubmit="handleSignUp(event)">
           <div class="fg">
             <label>Full Name</label>
@@ -113,13 +196,13 @@
             </div>
           </div>
           <div class="fg" id="suBdayFg">
-            <label>Birthday <span class="hint-lbl">(this becomes your password — YYYY-MM-DD)</span></label>
+            <label>Birthday <span class="hint-lbl">— This becomes your password (YYYY-MM-DD)</span></label>
             <input type="date" id="suBirthday" class="plain-input">
           </div>
           <div class="fg" id="suStrandFg">
             <label>Grade, Strand &amp; Section</label>
             <select id="suStrand" class="plain-input">
-              <option value="">Select your section</option>
+              <option value="">— Select your strand —</option>
               <optgroup label="GRADE 11">
                 <option value="G11-HUMSS-A">G11 | HUMSS | Section A</option>
                 <option value="G11-HUMSS-B">G11 | HUMSS | Section B</option>
@@ -127,10 +210,8 @@
                 <option value="G11-STEM-B">G11 | STEM | Section B</option>
                 <option value="G11-HEHO-A">G11 | H.E-H.O | Section A</option>
                 <option value="G11-HEHO-B">G11 | H.E-H.O | Section B</option>
-                <option value="G11-ICT-A">G11 | ICT-CP | Section A</option>
-                <option value="G11-ICT-B">G11 | ICT-CP | Section B</option>
-                <option value="G11-ABM-A">G11 | ABM | Section A</option>
-                <option value="G11-ABM-B">G11 | ABM | Section B</option>
+                <option value="G11-ICT-A">G11 | ICT-CP</option>
+                <option value="G11-ABM-A">G11 | ABM</option>
               </optgroup>
               <optgroup label="GRADE 12">
                 <option value="G12-HUMSS-A">G12 | HUMSS | Section A</option>
@@ -139,26 +220,115 @@
                 <option value="G12-STEM-B">G12 | STEM | Section B</option>
                 <option value="G12-HEHO-A">G12 | H.E-H.O | Section A</option>
                 <option value="G12-HEHO-B">G12 | H.E-H.O | Section B</option>
-                <option value="G12-ICT-A">G12 | ICT-CP | Section A</option>
-                <option value="G12-ICT-B">G12 | ICT-CP | Section B</option>
-                <option value="G12-ABM-A">G12 | ABM | Section A</option>
-                <option value="G12-ABM-B">G12 | ABM | Section B</option>
+                <option value="G12-ICT-A">G12 | ICT-CP</option>
+                <option value="G12-ABM-A">G12 | ABM</option>
               </optgroup>
             </select>
           </div>
-          <button type="submit" class="btn-red">Create Account</button>
+          <!-- Terms & Conditions checkbox -->
+          <div class="tc-wrap">
+            <label class="tc-check-lbl">
+              <input type="checkbox" id="suTcCheck" onchange="onTcCheck()">
+              <span class="tc-checkmark"></span>
+              <span class="tc-text">I have read and agree to the
+                <button type="button" class="tc-link" onclick="openTcModal()">Terms &amp; Conditions</button>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn-red" id="suSubmitBtn" disabled style="opacity:0.45;cursor:not-allowed;">Create Account</button>
         </form>
         <p class="auth-switch">Already have an account?
-          <a href="#" class="link-gold" onclick="switchAuth('login');return false;">Log In</a></p>
-      </div>
-    </div>
-  </div>
-</div>
+          <a href="#" class="link-gold" onclick="switchAuth('login');return false;">Log In here</a></p>
+      </div><!-- end authSignup -->
 
-<!-- ========== STUDENT DASHBOARD ========== -->
+      <!-- ── TERMS & CONDITIONS MODAL ── -->
+      <div class="tc-modal-overlay hidden" id="tcModal">
+        <div class="tc-modal-card">
+          <div class="tc-modal-head">
+            <div class="tc-modal-icon">📋</div>
+            <div>
+              <h3 class="tc-modal-title">Terms &amp; Conditions</h3>
+              <p class="tc-modal-sub">Asia Source iCollege Student Portal</p>
+            </div>
+            <button class="modal-close" onclick="closeTcModal()" style="position:relative;top:0;right:0;flex-shrink:0;">✕</button>
+          </div>
+
+          <div class="tc-body" id="tcBody">
+
+            <div class="tc-section">
+              <h4>1. Acceptance of Terms</h4>
+              <p>By creating an account on the Asia Source iCollege Student Portal, you agree to be bound by these Terms and Conditions, our Privacy Policy, and all applicable school regulations. If you do not agree with any of these terms, you may not register or use this portal.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>2. Account Eligibility &amp; Registration</h4>
+              <p>Access to this portal is exclusively for currently enrolled students and registered faculty of Asia Source iCollege. You must provide accurate, complete, and current information during registration. Use of false identity or misrepresentation of student/faculty status is strictly prohibited and may result in permanent account suspension.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>3. Account Security &amp; Password</h4>
+              <p>Your password is your birthday in YYYY-MM-DD format. You are solely responsible for maintaining the confidentiality of your credentials. You must not share your login credentials with any other person. Asia Source iCollege will not be held liable for any unauthorized access resulting from your failure to secure your account. Notify school administration immediately if you suspect unauthorized use.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>4. Privacy &amp; Data Collection</h4>
+              <p>Asia Source iCollege collects personal information including your name, birthday, strand/section, and academic records solely for educational and administrative purposes. Your data will never be sold, shared, or disclosed to third parties without your explicit consent, except as required by law or school policy. Academic records stored in this portal are confidential and protected.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>5. Academic Integrity</h4>
+              <p>Grade records and academic data visible in this portal are official school records. Any attempt to manipulate, falsify, or tamper with academic data, including grades and attendance records, is a serious violation of academic integrity and may result in disciplinary action including expulsion and legal proceedings under the Education Act of the Philippines.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>6. Acceptable Use Policy</h4>
+              <p>This portal is provided solely for academic and administrative purposes. You agree not to use this system for any unlawful purpose, to harass or harm other users, to attempt unauthorized access to other accounts, or to interfere with system operations. Violations may result in immediate account termination and referral to school authorities.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>7. Intellectual Property</h4>
+              <p>All content, design, and functionality of this portal — including academic materials, grade systems, and branding — are the intellectual property of Asia Source iCollege. You may not reproduce, distribute, or create derivative works without written permission from school administration.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>8. Portal Availability</h4>
+              <p>Asia Source iCollege makes no warranty that the portal will be available at all times. Scheduled maintenance and unforeseen outages may occur. The school reserves the right to modify, suspend, or terminate the portal or your access at any time without prior notice, consistent with school policy.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>9. Changes to Terms</h4>
+              <p>Asia Source iCollege reserves the right to update these Terms and Conditions at any time. Continued use of the portal after changes constitutes acceptance of the updated terms. Students will be notified of material changes through official school communication channels.</p>
+            </div>
+
+            <div class="tc-section">
+              <h4>10. Governing Law</h4>
+              <p>These Terms and Conditions are governed by the laws of the Republic of the Philippines, and the rules and regulations of Asia Source iCollege. Any disputes arising from portal use shall be subject to the jurisdiction of the appropriate school disciplinary bodies and, if necessary, Philippine courts.</p>
+            </div>
+
+          </div><!-- end tc-body -->
+
+          <div class="tc-footer">
+            <div class="tc-scroll-hint" id="tcScrollHint">📜 Please scroll to read all terms before accepting</div>
+            <button class="tc-accept-btn" id="tcAcceptBtn" onclick="acceptTc()" disabled>
+              <span>✅ I Accept All Terms &amp; Conditions</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end lp-card -->
+  </div><!-- end lp-right -->
+
+</div><!-- end loginPage -->
+
+<!-- ══════ STUDENT DASHBOARD ══════ -->
 <div id="studentDash" class="page hidden">
   <nav class="dash-nav">
-    <div class="dash-brand"><img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege</div>
+    <div class="nav-accent"></div>
+    <div class="dash-brand">
+      <img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege
+    </div>
     <div class="nav-right">
       <button class="dm-nav-btn" onclick="toggleDark()"><span id="dmNavIcon">🌙</span></button>
       <div class="user-pill"><div class="uavatar">S</div><span id="stuName">Student</span></div>
@@ -168,13 +338,17 @@
   <div class="dash-body">
     <div class="stu-layout">
       <aside class="stu-sidebar">
-        <div class="profile-card">
-          <div class="pc-avatar">🎓</div>
+        <div class="profile-card clickable-profile" onclick="openProfileModal()" title="Click to view/edit profile">
+          <div class="pc-avatar-wrap">
+            <div class="pc-avatar-ring"></div>
+            <div class="pc-avatar">🎓</div>
+          </div>
           <div class="pc-name" id="stuProfileName">Student</div>
           <div class="pc-badge" id="stuProfileStrand">-</div>
           <div class="pc-email" id="stuProfileEmail">-</div>
           <div class="pc-row"><span>Birthday:</span><span id="stuProfileBday">-</span></div>
           <div class="pc-row"><span>Email:</span><span id="stuProfileLRN">-</span></div>
+          <div class="profile-edit-hint">✏️ Click to edit profile</div>
         </div>
       </aside>
       <div class="stu-main">
@@ -192,10 +366,13 @@
   </div>
 </div>
 
-<!-- ========== TEACHER DASHBOARD ========== -->
+<!-- ══════ TEACHER DASHBOARD ══════ -->
 <div id="teacherDash" class="page hidden">
   <nav class="dash-nav">
-    <div class="dash-brand"><img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege</div>
+    <div class="nav-accent"></div>
+    <div class="dash-brand">
+      <img src="logo.png" alt="" onerror="this.style.display='none'"> Asia Source iCollege
+    </div>
     <div class="nav-right">
       <button class="dm-nav-btn" onclick="toggleDark()"><span id="dmNavIcon2">🌙</span></button>
       <div class="user-pill"><div class="uavatar t">T</div><span id="tchName">Teacher</span></div>
@@ -207,11 +384,15 @@
 
       <!-- SIDEBAR -->
       <aside class="tch-sidebar">
-        <div class="profile-card">
-          <div class="pc-avatar">👩‍🏫</div>
+        <div class="profile-card clickable-profile" onclick="openProfileModal()" title="Click to view/edit profile">
+          <div class="pc-avatar-wrap">
+            <div class="pc-avatar-ring"></div>
+            <div class="pc-avatar">👩‍🏫</div>
+          </div>
           <div class="pc-name" id="tchProfileName">Teacher</div>
           <div class="pc-badge">Faculty</div>
           <div class="pc-email" id="tchProfileEmail">-</div>
+          <div class="profile-edit-hint">✏️ Click to edit profile</div>
         </div>
         <div class="sidebar-section-lbl">Strand Folders</div>
         <div class="strand-list" id="strandList">
@@ -229,11 +410,11 @@
           </div>
           <div class="strand-item" data-strand="ICT" onclick="openFolder(this)">
             <span class="si-icon">📁</span>
-            <div><div class="si-name">ICT - CP</div><div class="si-sub">Section A &amp; B</div></div>
+            <div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div>
           </div>
           <div class="strand-item" data-strand="ABM" onclick="openFolder(this)">
             <span class="si-icon">📁</span>
-            <div><div class="si-name">ABM</div><div class="si-sub">Section A &amp; B</div></div>
+            <div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div>
           </div>
         </div>
       </aside>
@@ -251,16 +432,15 @@
               <button class="vtab" id="vtabClassRec" onclick="setView('classrecord',this)">📋 Class Record</button>
               <button class="vtab" id="vtabAttend" onclick="setView('attendance',this)">📅 Attendance</button>
             </div>
-            <div class="sec-tabs">
+            <div class="sec-tabs" id="secTabsWrap">
               <button class="stab active" onclick="switchSection('A',this)">Section A</button>
               <button class="stab" onclick="switchSection('B',this)">Section B</button>
             </div>
           </div>
         </div>
 
-        <!-- ── GRADEBOOK VIEW ── -->
+        <!-- GRADEBOOK VIEW -->
         <div id="viewGradebook" class="tch-view">
-          <!-- Quarter toolbar injected here by JS -->
           <div id="gbToolbar" class="view-toolbar"></div>
           <div class="cr-scroll-wrap">
             <table class="gb-table">
@@ -268,12 +448,26 @@
                 <tr>
                   <th class="gb-num">#</th>
                   <th class="gb-name">Student Name</th>
-                  <th>WW /30</th>
-                  <th>PT /30</th>
-                  <th>QE /40</th>
-                  <th>Activity /20</th>
-                  <th>Computed Grade</th>
+                  <th colspan="3" class="gb-group-th" style="background:rgba(14,165,233,0.35);">📝 Quizzes</th>
+                  <th colspan="3" class="gb-group-th" style="background:rgba(16,185,129,0.35);">🎯 Activities</th>
+                  <th colspan="2" class="gb-group-th" style="background:rgba(245,158,11,0.35);">📁 Projects</th>
+                  <th class="gb-group-th" style="background:rgba(232,0,15,0.35);">📄 Exam</th>
+                  <th>Computed</th>
                   <th>Remarks</th>
+                  <th id="gbSubjTh" class="gb-subj-th">Subject Grade</th>
+                </tr>
+                <tr class="gb-sub-header">
+                  <th></th><th></th>
+                  <th class="gb-sub-th" style="color:#7dd3fc;">Q1 /20</th>
+                  <th class="gb-sub-th" style="color:#7dd3fc;">Q2 /20</th>
+                  <th class="gb-sub-th" style="color:#7dd3fc;">Q3 /20</th>
+                  <th class="gb-sub-th" style="color:#6ee7b7;">A1 /20</th>
+                  <th class="gb-sub-th" style="color:#6ee7b7;">A2 /20</th>
+                  <th class="gb-sub-th" style="color:#6ee7b7;">A3 /20</th>
+                  <th class="gb-sub-th" style="color:#fcd34d;">P1 /50</th>
+                  <th class="gb-sub-th" style="color:#fcd34d;">P2 /50</th>
+                  <th class="gb-sub-th" style="color:#fca5a5;">Exam /100</th>
+                  <th></th><th></th><th></th>
                 </tr>
               </thead>
               <tbody id="gbBody"></tbody>
@@ -286,13 +480,11 @@
           </div>
         </div>
 
-        <!-- ── CLASS RECORD VIEW ── -->
+        <!-- CLASS RECORD VIEW -->
         <div id="viewClassRecord" class="tch-view hidden">
-          <!-- Subject toolbar injected here by JS -->
           <div id="crToolbar" class="view-toolbar"></div>
           <div class="cr-scroll-wrap">
             <table class="cr-table">
-              <!-- thead is built dynamically -->
               <thead id="crHead"></thead>
               <tbody id="crBody"></tbody>
             </table>
@@ -304,7 +496,7 @@
           </div>
         </div>
 
-        <!-- ── ATTENDANCE VIEW ── -->
+        <!-- ATTENDANCE VIEW -->
         <div id="viewAttendance" class="tch-view hidden">
           <div class="att-legend">
             <span class="att-key att-p">P = Present</span>
@@ -322,19 +514,182 @@
             </table>
           </div>
         </div>
-
-      </div><!-- end tch-main -->
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ========== SUBJECT MODAL ========== -->
+<!-- ══════ SUBJECT MODAL ══════ -->
 <div class="modal-overlay hidden" id="subjectModal" onclick="if(event.target===this)closeSubjectModal()">
   <div class="modal-card">
     <button class="modal-close" onclick="closeSubjectModal()">✕</button>
     <h3 class="modal-title" id="subjectModalTitle">Subject</h3>
     <p class="modal-sub" id="subjectModalSub"></p>
     <div id="subjectModalContent"></div>
+  </div>
+</div>
+
+<!-- ══════ PROFILE MODAL ══════ -->
+<div class="modal-overlay hidden" id="profileModal" onclick="if(event.target===this)closeProfileModal()">
+  <div class="modal-card profile-modal-card">
+    <button class="modal-close" onclick="closeProfileModal()">✕</button>
+
+    <div class="pm-header">
+      <div class="pm-avatar-wrap">
+        <div class="pm-avatar-ring-2"></div>
+        <div class="pm-avatar-ring"></div>
+        <div class="pm-avatar" id="pmAvatar">🎓</div>
+      </div>
+      <div class="pm-head-info">
+        <h3 class="pm-name" id="pmName">Student Name</h3>
+        <div class="pm-role-badge" id="pmRoleBadge">Student</div>
+        <div class="pm-email-display" id="pmEmailDisplay">—</div>
+      </div>
+    </div>
+
+    <div class="pm-tabs">
+      <button class="pm-tab active" id="pmTabInfo" onclick="switchPmTab('info',this)">👤 Profile Info</button>
+      <button class="pm-tab" id="pmTabPass" onclick="switchPmTab('password',this)">🔐 Reset Password</button>
+    </div>
+
+    <!-- PROFILE INFO -->
+    <div id="pmPanelInfo" class="pm-panel">
+      <div class="alert hidden" id="pmInfoAlert"></div>
+      <div class="alert success hidden" id="pmInfoSuccess"></div>
+      <div class="pm-info-grid">
+        <div class="pm-info-item">
+          <div class="pm-info-icon">🪪</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Student ID</div><div class="pm-info-val" id="pmInfoStudentId">—</div></div>
+        </div>
+        <div class="pm-info-item">
+          <div class="pm-info-icon">⚧</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Gender</div><div class="pm-info-val" id="pmInfoGender">—</div></div>
+        </div>
+        <div class="pm-info-item">
+          <div class="pm-info-icon">👤</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Full Name</div><div class="pm-info-val" id="pmInfoName">—</div></div>
+        </div>
+        <div class="pm-info-item">
+          <div class="pm-info-icon">🎂</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Date of Birth</div><div class="pm-info-val" id="pmInfoBday">—</div></div>
+        </div>
+        <div class="pm-info-item pm-info-wide">
+          <div class="pm-info-icon">📧</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Email Address</div><div class="pm-info-val" id="pmInfoEmail">—</div></div>
+        </div>
+        <div class="pm-info-item">
+          <div class="pm-info-icon">📱</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Mobile Number</div><div class="pm-info-val" id="pmInfoMobile">—</div></div>
+        </div>
+        <div class="pm-info-item">
+          <div class="pm-info-icon">🎯</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Age</div><div class="pm-info-val" id="pmInfoAge">—</div></div>
+        </div>
+        <div class="pm-info-item pm-info-wide" id="pmStrandItem">
+          <div class="pm-info-icon">📚</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Strand / Section</div><div class="pm-info-val" id="pmInfoStrand">—</div></div>
+        </div>
+        <div class="pm-info-item pm-info-wide" id="pmAddressItem">
+          <div class="pm-info-icon">🏠</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">Home Address</div><div class="pm-info-val" id="pmInfoAddress">—</div></div>
+        </div>
+        <div class="pm-info-item pm-info-wide">
+          <div class="pm-info-icon">🏙️</div>
+          <div class="pm-info-body"><div class="pm-info-lbl">City</div><div class="pm-info-val" id="pmInfoCity">—</div></div>
+        </div>
+      </div>
+      <div class="pm-edit-section">
+        <div class="pm-edit-title">✏️ Edit Profile</div>
+        <div class="pm-edit-row2">
+          <div class="fg">
+            <label>Full Name</label>
+            <input type="text" id="pmEditName" class="plain-input" placeholder="Your full name">
+          </div>
+          <div class="fg">
+            <label>Gender</label>
+            <select id="pmEditGender" class="plain-input">
+              <option value="">— Select —</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </div>
+        </div>
+        <div class="pm-edit-row2">
+          <div class="fg">
+            <label>Mobile Number</label>
+            <input type="tel" id="pmEditMobile" class="plain-input" placeholder="e.g. 09XX-XXX-XXXX">
+          </div>
+          <div class="fg">
+            <label>City</label>
+            <input type="text" id="pmEditCity" class="plain-input" placeholder="e.g. Quezon City">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Home Address</label>
+          <input type="text" id="pmEditAddress" class="plain-input" placeholder="e.g. 123 Rizal St., Barangay...">
+        </div>
+        <div class="fg" id="pmEditStrandFg" style="display:none">
+          <label>Strand &amp; Section</label>
+          <select id="pmEditStrand" class="plain-input">
+            <option value="">Select strand</option>
+            <optgroup label="GRADE 11">
+              <option value="G11-HUMSS-A">G11 | HUMSS | Section A</option>
+              <option value="G11-HUMSS-B">G11 | HUMSS | Section B</option>
+              <option value="G11-STEM-A">G11 | STEM | Section A</option>
+              <option value="G11-STEM-B">G11 | STEM | Section B</option>
+              <option value="G11-HEHO-A">G11 | H.E-H.O | Section A</option>
+              <option value="G11-HEHO-B">G11 | H.E-H.O | Section B</option>
+              <option value="G11-ICT-A">G11 | ICT-CP</option>
+              <option value="G11-ABM-A">G11 | ABM</option>
+            </optgroup>
+            <optgroup label="GRADE 12">
+              <option value="G12-HUMSS-A">G12 | HUMSS | Section A</option>
+              <option value="G12-HUMSS-B">G12 | HUMSS | Section B</option>
+              <option value="G12-STEM-A">G12 | STEM | Section A</option>
+              <option value="G12-STEM-B">G12 | STEM | Section B</option>
+              <option value="G12-HEHO-A">G12 | H.E-H.O | Section A</option>
+              <option value="G12-HEHO-B">G12 | H.E-H.O | Section B</option>
+              <option value="G12-ICT-A">G12 | ICT-CP</option>
+              <option value="G12-ABM-A">G12 | ABM</option>
+            </optgroup>
+          </select>
+        </div>
+        <button class="btn-red" onclick="saveProfileInfo()">💾 Save Profile</button>
+      </div>
+    </div>
+
+    <!-- RESET PASSWORD -->
+    <div id="pmPanelPass" class="pm-panel hidden">
+      <div class="alert hidden" id="pmPassAlert"></div>
+      <div class="alert success hidden" id="pmPassSuccess"></div>
+      <div class="pm-pass-intro">
+        <div class="pm-pass-icon">🔐</div>
+        <p>Enter your current password, then choose your new password. You can use any password you like.</p>
+      </div>
+      <div class="fg">
+        <label>Current Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="pmCurrPass" class="plain-input" placeholder="Your current password" style="padding-right:44px">
+          <button type="button" class="pw-eye" onclick="togglePass('pmCurrPass')">👁</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>New Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="pmNewPass" class="plain-input" placeholder="Choose any new password" style="padding-right:44px">
+          <button type="button" class="pw-eye" onclick="togglePass('pmNewPass')">👁</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Confirm New Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="pmConfPass" class="plain-input" placeholder="Repeat your new password" style="padding-right:44px">
+          <button type="button" class="pw-eye" onclick="togglePass('pmConfPass')">👁</button>
+        </div>
+      </div>
+      <button class="btn-red" onclick="saveNewPassword()">🔐 Reset Password</button>
+    </div>
   </div>
 </div>
 
