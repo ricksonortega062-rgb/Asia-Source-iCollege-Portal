@@ -108,6 +108,7 @@ loadGrades();
 // Global state
 var currentUser=null,currentRole="student";
 var currentFolder="HUMSS",currentSection="A";
+var currentGradeLevel="G11";
 var currentView="gradebook";
 var currentQuarter="q1",currentSubject=null,currentGbSubject=null;
 var gbSearchQuery="",suRole="student",isDark=true;
@@ -125,13 +126,25 @@ function showAlert(id,msg,type){var e=g(id);if(!e)return;e.textContent=msg;e.cla
 function hideAlert(id){var e=g(id);if(e)e.className="alert hidden";}
 
 function toggleDark(){
+  // Only allow toggle when user is logged in (not on login page)
+  if(g("loginPage")&&!g("loginPage").classList.contains("hidden")) return;
   isDark=!isDark;
   document.documentElement.setAttribute("data-theme",isDark?"dark":"light");
   var icon=isDark?"🌙":"☀️";
   ["dmNavIcon","dmNavIcon2"].forEach(function(id){var e=g(id);if(e)e.textContent=icon;});
-  var lbl=g("dmLabel"),li=g("dmIconLeft");
-  if(lbl)lbl.textContent=isDark?"Dark":"Light";
-  if(li)li.textContent=isDark?"🌙":"☀️";
+  try{localStorage.setItem("asiasource_dark",isDark?"1":"0");}catch(e){}
+}
+// Login page is always forced dark
+function applyLoginDark(){
+  document.documentElement.setAttribute("data-theme","dark");
+  isDark=true;
+}
+function applyUserTheme(){
+  // Apply saved theme preference when user logs in
+  try{var saved=localStorage.getItem("asiasource_dark");if(saved!==null){isDark=saved==="1";}}catch(e){}
+  document.documentElement.setAttribute("data-theme",isDark?"dark":"light");
+  var icon=isDark?"🌙":"☀️";
+  ["dmNavIcon","dmNavIcon2"].forEach(function(id){var e=g(id);if(e)e.textContent=icon;});
 }
 
 function switchAuth(tab){
@@ -207,7 +220,7 @@ function handleLogin(e){
       showAlert("alertBox",emailExists?"Wrong password. Use your birthday: YYYY-MM-DD":"Email not found. Check spelling or sign up first.");
       return;
     }
-    currentUser=stu;hideEl("loginPage");loadStudentDash(stu);showEl("studentDash");
+    currentUser=stu;hideEl("loginPage");applyUserTheme();loadStudentDash(stu);showEl("studentDash");
   } else {
     var tch=null;
     for(var j=0;j<DB.teachers.length;j++){if(DB.teachers[j].emailUser===eu&&DB.teachers[j].pass===pw){tch=DB.teachers[j];break;}}
@@ -217,13 +230,14 @@ function handleLogin(e){
       showAlert("alertBox",tchEmailExists?"Wrong password. Use your birthday: YYYY-MM-DD":"Teacher email not found. Check spelling or sign up first.");
       return;
     }
-    currentUser=tch;hideEl("loginPage");loadTeacherDash(tch);showEl("teacherDash");
+    currentUser=tch;hideEl("loginPage");applyUserTheme();loadTeacherDash(tch);showEl("teacherDash");
   }
 }
 
 function logout(){
   hideEl("studentDash");hideEl("teacherDash");showEl("loginPage");
   currentUser=null;g("userId").value="";g("password").value="";
+  applyLoginDark(); // Always dark on login page
 }
 
 // ══════════════════════════════════════════════════
@@ -398,32 +412,53 @@ function getSectionLetter(strand){
   return m ? m[1] : "";
 }
 
-// Compute the rosterKey for a student strand e.g. "G11-STEM-A" → "STEM-A"
+// Compute the rosterKey for a student strand e.g. "G11-STEM-A" → "G11-STEM-A" (full key with grade)
 function strandToRosterKey(strand){
   if(!strand) return null;
-  // Remove grade prefix: G11-STEM-A → STEM-A, G11-HEHO-A → HE-HO-A
-  var noGrade = strand.replace(/^G\d+-/,"");
-  // HEHO → HE-HO
-  noGrade = noGrade.replace(/^HEHO-/,"HE-HO-");
-  return noGrade; // e.g. "STEM-A", "HE-HO-A", "ICT-A", "ABM-A"
+  // Normalize: G11-HEHO-A → G11-HE-HO-A
+  return strand.replace(/HEHO/,"HE-HO");
 }
 
-// Returns combined roster for a classKey (static + dynamically added registered students)
+// Get just the section+strand part without grade: "G11-STEM-A" → "STEM-A"
+function strandToClassKey(strand){
+  if(!strand) return null;
+  var noGrade = strand.replace(/^G\d+-/,"").replace(/^HEHO-/,"HE-HO-");
+  return noGrade;
+}
+
+// Build roster key from folder strand + grade level + section: e.g. "STEM","G11","A" → "G11-STEM-A"
+function buildRosterKey(strand,grade,section){
+  return (grade||"G11")+"-"+strand+"-"+(section||"A");
+}
+
+// Returns combined roster for a folder selection (grade+strand+section)
 // Each entry has: {name, studentId, gender, strand, isRegistered}
-function getDynamicRoster(classKey){
-  var base = DB.classRoster[classKey]||{male:[],female:[]};
+function getDynamicRoster(classKey, grade){
+  // classKey is like "STEM-A", grade is "G11" or "G12"
+  grade = grade||currentGradeLevel||"G11";
+  var fullKey = grade+"-"+classKey; // e.g. "G11-STEM-A"
+  var legacyBase = DB.classRoster[classKey]||{male:[],female:[]}; // old static roster
+  var gradeBase  = DB.classRoster[fullKey]||{male:[],female:[]}; // new per-grade roster
+
+  // Start with merged base (legacy only for G11 to avoid duplication)
+  var baseMale   = grade==="G11" ? legacyBase.male.concat(gradeBase.male.filter(function(n){return legacyBase.male.indexOf(n)<0;})) : gradeBase.male.slice();
+  var baseFemale = grade==="G11" ? legacyBase.female.concat(gradeBase.female.filter(function(n){return legacyBase.female.indexOf(n)<0;})) : gradeBase.female.slice();
+
   var result = {
-    male:   base.male.map(function(n){ return {name:n,studentId:null,gender:"male",strand:"",isRegistered:false}; }),
-    female: base.female.map(function(n){ return {name:n,studentId:null,gender:"female",strand:"",isRegistered:false}; })
+    male:   baseMale.map(function(n){ return {name:n,studentId:null,gender:"male",strand:"",isRegistered:false}; }),
+    female: baseFemale.map(function(n){ return {name:n,studentId:null,gender:"female",strand:"",isRegistered:false}; })
   };
-  // Overlay registered students whose strand maps to this classKey
+
+  // Overlay registered students whose strand matches this grade+strand+section
   for(var i=0;i<DB.students.length;i++){
     var stu=DB.students[i];
-    var rk=strandToRosterKey(stu.strand);
-    if(rk!==classKey) continue;
-    // Determine gender
+    if(!stu.strand) continue;
+    var rk = strandToRosterKey(stu.strand); // e.g. "G11-STEM-A"
+    var rkClass = strandToClassKey(stu.strand); // e.g. "STEM-A"
+    var stuGrade = getGradeLevelShort(stu.strand); // "G11" or "G12"
+    // Must match grade AND classKey
+    if(stuGrade!==grade || rkClass!==classKey) continue;
     var gender=stu.gender&&stu.gender.toLowerCase()==="female"?"female":"male";
-    // Check if already in base roster by name
     var found=false;
     var arr=result[gender];
     for(var j=0;j<arr.length;j++){
@@ -433,13 +468,12 @@ function getDynamicRoster(classKey){
       }
     }
     if(!found){
-      // Check if teacher approved this student (via invites or addedByTeacher)
       var invitesList=loadInvites();
       var isApproved=false;
       for(var k=0;k<invitesList.length;k++){
-        if(invitesList[k].studentId===stu.id&&(invitesList[k].status==="approved")){isApproved=true;break;}
+        if(invitesList[k].studentId===stu.id&&invitesList[k].status==="approved"){isApproved=true;break;}
       }
-      if(isApproved||stu.approvedSubjects&&stu.approvedSubjects.length>0){
+      if(isApproved||(stu.approvedSubjects&&stu.approvedSubjects.length>0)){
         result[gender].push({name:stu.name,studentId:stu.id,gender:gender,strand:stu.strand,isRegistered:true});
       }
     }
@@ -447,13 +481,13 @@ function getDynamicRoster(classKey){
   return result;
 }
 
-// Add a student to the class roster (dynamic, persists in DB.classRoster)
+// Add a student to the class roster using full grade-aware key
 function addStudentToStaticRoster(stu){
-  var rk = strandToRosterKey(stu.strand);
-  if(!rk) return;
-  if(!DB.classRoster[rk]) DB.classRoster[rk]={male:[],female:[]};
+  var fullKey = strandToRosterKey(stu.strand); // "G11-STEM-A"
+  if(!fullKey) return;
+  if(!DB.classRoster[fullKey]) DB.classRoster[fullKey]={male:[],female:[]};
   var gender = stu.gender&&stu.gender.toLowerCase()==="female"?"female":"male";
-  var arr = DB.classRoster[rk][gender];
+  var arr = DB.classRoster[fullKey][gender];
   for(var i=0;i<arr.length;i++){ if(arr[i]===stu.name) return; }
   arr.push(stu.name);
   saveDB();
@@ -535,7 +569,19 @@ function loadStudentDash(stu){
   g("stuProfileEmail").textContent=stu.email+"@asiasourceicollege.edu.ph";
   g("stuProfileBday").textContent=stu.bday||"-";
   g("stuProfileLRN").textContent=stu.emailUser;
-  g("stuProfileStrand").textContent=DB.strandFull[stu.strand]||stu.strand;
+  // Show strand with grade level indicator
+  var gl=getGradeLevel(stu.strand);
+  var glShort=getGradeLevelShort(stu.strand);
+  var sn=getStrandName(stu.strand);
+  var sec=getSectionLetter(stu.strand);
+  var isG11=stu.strand&&stu.strand.indexOf("G11")>=0;
+  var glColor=isG11?"#0ea5e9":"#10b981";
+  var strandEl=g("stuProfileStrand");
+  if(strandEl){
+    strandEl.innerHTML=
+      (glShort?'<span style="background:'+glColor+'22;border:1px solid '+glColor+'55;color:'+glColor+';border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;margin-right:4px;">'+glShort+'</span>':"")+
+      (DB.strandFull[stu.strand]||stu.strand);
+  }
 
   // Check for approved subjects
   var approved=getApprovedSubjects(stu.id).map(function(inv){return inv.subjectName;});
@@ -794,7 +840,7 @@ function loadTeacherDash(tch){
   // Render notif badge
   updateTeacherNotifBadge();
 
-  openFolderByStrand("HUMSS");
+  openFolderByStrand("HUMSS","G11");
 }
 
 function updateTeacherNotifBadge(){
@@ -989,17 +1035,22 @@ function addStudentToGradebook(stuId){
 // ══════════════════════════════════════════════════
 function openFolder(el){
   var strand=el.getAttribute("data-strand");
+  var grade=el.getAttribute("data-grade")||"G11";
   var items=document.querySelectorAll(".strand-item");
   for(var i=0;i<items.length;i++) items[i].className="strand-item";
   el.className="strand-item active";
-  openFolderByStrand(strand);
+  openFolderByStrand(strand,grade);
 }
-function openFolderByStrand(strand){
-  currentFolder=strand;
+function openFolderByStrand(strand,grade){
+  grade=grade||"G11";
+  currentFolder=strand;currentGradeLevel=grade;
   var singleSection=(strand==="ICT"||strand==="ABM");
   currentSection="A";currentView="gradebook";currentQuarter="q1";
   currentGbSubject=DB.crSubjects[0];gbSearchQuery="";
-  g("folderTitle").textContent=(DB.strandLabels[strand]||strand)+" — Student List";
+  var isG11=grade==="G11";
+  var glColor=isG11?"#0ea5e9":"#10b981";
+  var glLabel=isG11?"Grade 11":"Grade 12";
+  g("folderTitle").innerHTML='<span class="folder-gl-pill" style="background:'+glColor+'22;border-color:'+glColor+'55;color:'+glColor+';">'+grade+'</span> '+(DB.strandLabels[strand]||strand)+" — Student List";
   var secTabsWrap=g("secTabsWrap");if(secTabsWrap)secTabsWrap.style.display=singleSection?"none":"";
   var stabs=document.querySelectorAll(".stab");stabs[0].className="stab active";if(stabs[1])stabs[1].className="stab";
   var vtabs=document.querySelectorAll(".vtab");for(var i=0;i<vtabs.length;i++)vtabs[i].className="vtab";
@@ -1068,7 +1119,7 @@ function renderGradebook(strand,section){
 }
 
 function _renderGbRows(key){
-  var r=getDynamicRoster(key);
+  var r=getDynamicRoster(key, currentGradeLevel);
   var tbody=g("gbBody");tbody.innerHTML="";
   var q=gbSearchQuery,COLSPAN=14;
   function matchesSearch(name){if(!q)return true;return name.toLowerCase().indexOf(q)>=0;}
@@ -1128,7 +1179,7 @@ function handleScoreInput(input){
   saveGrades();
 }
 function saveQuarterGrades(classKey){
-  var r=getDynamicRoster(classKey);var saved=0,skipped=0;
+  var r=getDynamicRoster(classKey, currentGradeLevel);var saved=0,skipped=0;
   function process(entries,genderLabel){for(var i=0;i<entries.length;i++){var sk=getScoreStoreKey(classKey,genderLabel,i),sc=getScores(sk,currentGbSubject,currentQuarter),fg=computeDetailedGrade(sc);if(fg===null){skipped++;continue;}setRosterGrade(classKey,entries[i].name,currentGbSubject,currentQuarter,fg);saved++;}}
   process(r.male,"male");process(r.female,"female");
   saveDB();saveGrades();
@@ -1141,7 +1192,7 @@ function saveQuarterGrades(classKey){
 // ══════════════════════════════════════════════════
 function setCrSubject(subj){currentSubject=subj;renderClassRecord(currentFolder,currentSection);}
 function renderClassRecord(strand,section){
-  var key=strand+"-"+section,r=getDynamicRoster(key);
+  var key=strand+"-"+section,r=getDynamicRoster(key, currentGradeLevel);
   if(!currentSubject)currentSubject=DB.crSubjects[0];
   var subjColor=getSubjColor(currentSubject),subjDark=darken(subjColor,-28);
   var crToolbar=g("crToolbar");
