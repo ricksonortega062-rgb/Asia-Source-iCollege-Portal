@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="extra.css">
 </head>
 <body>
 
@@ -20,30 +21,18 @@
 
 <!-- ══════ LOGIN PAGE ══════ -->
 <div id="loginPage" class="lp-wrapper">
-
-  <!-- ══ LEFT PANEL — Branding ══ -->
   <div class="lp-left">
     <div class="lp-left-inner">
-
-      <!-- Logo with 3D orbit -->
       <div class="lp-logo-wrap">
         <div class="logo-orbit-3"></div>
         <div class="logo-orbit-2"></div>
         <div class="logo-orbit"></div>
         <div class="logo-hex-bg"></div>
-        <img class="lp-logo-3d" src="logo.png" alt="AS"
-          onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)';this.alt='AS'">
+        <img class="lp-logo-3d" src="logo.png" alt="AS" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)';this.alt='AS'">
       </div>
-
-      <!-- School Name -->
       <h1 class="lp-title">ASIA SOURCE<em>iCOLLEGE</em></h1>
-
-      <!-- Accredited badge -->
       <div class="lp-badge"><span class="lp-dot"></span> Accredited Learning Institution</div>
-
       <div class="lp-divider"></div>
-
-      <!-- ★ MOTTO ★ -->
       <div class="lp-motto-wrap">
         <div class="lp-motto-deco lp-motto-deco-left">"</div>
         <p class="lp-motto">Your Success<br><span class="lp-motto-accent">is Our Goal</span></p>
@@ -51,26 +40,12 @@
         <div class="lp-motto-underline"></div>
         <p class="lp-motto-sub">— Asia Source iCollege</p>
       </div>
-
       <div class="lp-divider" style="margin-top:28px;margin-bottom:22px;"></div>
-
-      <!-- Stats -->
       <div class="lp-stats">
-        <div class="lp-stat">
-          <span class="ls-num">5+</span>
-          <span class="ls-lbl">Strands</span>
-        </div>
-        <div class="lp-stat">
-          <span class="ls-num">100%</span>
-          <span class="ls-lbl">Accredited</span>
-        </div>
-        <div class="lp-stat">
-          <span class="ls-num">24/7</span>
-          <span class="ls-lbl">Access</span>
-        </div>
+        <div class="lp-stat"><span class="ls-num">5+</span><span class="ls-lbl">Strands</span></div>
+        <div class="lp-stat"><span class="ls-num">100%</span><span class="ls-lbl">Accredited</span></div>
+        <div class="lp-stat"><span class="ls-num">24/7</span><span class="ls-lbl">Access</span></div>
       </div>
-
-      <!-- Decorative bottom flourish -->
       <div class="lp-bottom-deco">
         <div class="lp-deco-line"></div>
         <div class="lp-deco-diamonds">
@@ -80,62 +55,45 @@
         </div>
         <div class="lp-deco-line"></div>
       </div>
+    </div>
+  </div>
 
-    </div><!-- end lp-left-inner -->
-  </div><!-- end lp-left -->
-
-  <!-- ══ RIGHT PANEL — Login Form ══ -->
   <div class="lp-right">
-    <!-- Animated geometric background canvas -->
     <canvas id="loginBgCanvas" class="login-bg-canvas"></canvas>
-
-    <!-- Dark mode toggle -->
     <button class="dm-toggle" id="dmToggle" onclick="toggleDark()" title="Toggle theme">
       <span id="dmIconLeft">🌙</span>
       <div class="dm-track"><div class="dm-thumb"></div></div>
       <span id="dmLabel">Dark</span>
     </button>
-
     <div class="lp-card">
-
-      <!-- Card Header -->
       <div class="lp-card-head">
-        <img class="lp-card-logo" src="logo.png" alt=""
-          onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
+        <img class="lp-card-logo" src="logo.png" alt="" onerror="this.style.background='linear-gradient(135deg,#c0000a,#7a0006)'">
         <div>
           <div class="lp-card-title">Asia Source <span>iCollege</span></div>
           <div class="lp-card-sub">Welcome! Please sign in to continue.</div>
         </div>
       </div>
-
-      <!-- Top accent stripe -->
       <div class="lp-stripe"></div>
-
-      <!-- Auth Tabs -->
       <div class="auth-tabs">
         <button class="auth-tab active" id="tabLogin" onclick="switchAuth('login')">🔑 Log In</button>
         <button class="auth-tab" id="tabSignup" onclick="switchAuth('signup')">✨ Sign Up</button>
       </div>
 
-      <!-- ── LOGIN FORM ── -->
+      <!-- LOGIN FORM -->
       <div id="authLogin">
         <div class="role-toggle">
           <button class="role-btn active" id="btnStudent" onclick="setRole('student')">🎓 Student</button>
           <button class="role-btn" id="btnTeacher" onclick="setRole('teacher')">👩‍🏫 Teacher</button>
         </div>
-
         <div class="alert hidden" id="alertBox"></div>
-
         <form onsubmit="handleLogin(event)">
           <div class="fg">
             <label>School Email</label>
             <div class="email-wrap">
-              <input type="text" id="userId" class="email-input" placeholder="yourname" required
-                oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
+              <input type="text" id="userId" class="email-input" placeholder="yourname" required oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
               <span class="email-sfx">@asiasourceicollege.edu.ph</span>
             </div>
           </div>
-
           <div class="fg">
             <label>Password <span class="hint-lbl">— Your birthday (YYYY-MM-DD)</span></label>
             <div class="pw-wrap">
@@ -143,16 +101,12 @@
               <button type="button" class="pw-eye" onclick="togglePass('password')">👁</button>
             </div>
           </div>
-
           <div class="fg-extras">
             <label class="check-lbl"><input type="checkbox"> Remember me</label>
             <a href="#" class="link-gold">Forgot password?</a>
           </div>
-
           <button type="submit" class="btn-red" id="loginBtn">Sign In as Student</button>
         </form>
-
-        <!-- Demo accounts -->
         <div class="demo-box">
           <div class="demo-title">📋 Demo Accounts</div>
           <div class="demo-cols">
@@ -170,18 +124,16 @@
           </div>
           <div class="demo-note">⚠ Password format is YYYY-MM-DD (your birthday)</div>
         </div>
-      </div><!-- end authLogin -->
+      </div>
 
-      <!-- ── SIGN UP FORM ── -->
+      <!-- SIGN UP FORM -->
       <div id="authSignup" class="hidden">
         <div class="role-toggle">
           <button class="role-btn active" id="suBtnStu" onclick="setSuRole('student')">🎓 Student</button>
           <button class="role-btn" id="suBtnTch" onclick="setSuRole('teacher')">👩‍🏫 Teacher</button>
         </div>
-
         <div class="alert hidden" id="suAlert"></div>
         <div class="alert success hidden" id="suSuccess"></div>
-
         <form onsubmit="handleSignUp(event)">
           <div class="fg">
             <label>Full Name</label>
@@ -190,8 +142,7 @@
           <div class="fg">
             <label>School Email</label>
             <div class="email-wrap">
-              <input type="text" id="suEmail" class="email-input" placeholder="yourname" required
-                oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
+              <input type="text" id="suEmail" class="email-input" placeholder="yourname" required oninput="this.value=this.value.replace(/[@\s]/g,'').toLowerCase()">
               <span class="email-sfx">@asiasourceicollege.edu.ph</span>
             </div>
           </div>
@@ -225,7 +176,6 @@
               </optgroup>
             </select>
           </div>
-          <!-- Terms & Conditions checkbox -->
           <div class="tc-wrap">
             <label class="tc-check-lbl">
               <input type="checkbox" id="suTcCheck" onchange="onTcCheck()">
@@ -235,92 +185,48 @@
               </span>
             </label>
           </div>
-
           <button type="submit" class="btn-red" id="suSubmitBtn" disabled style="opacity:0.45;cursor:not-allowed;">Create Account</button>
         </form>
         <p class="auth-switch">Already have an account?
           <a href="#" class="link-gold" onclick="switchAuth('login');return false;">Log In here</a></p>
-      </div><!-- end authSignup -->
-
-      <!-- ── TERMS & CONDITIONS MODAL ── -->
-      <div class="tc-modal-overlay hidden" id="tcModal">
-        <div class="tc-modal-card">
-          <div class="tc-modal-head">
-            <div class="tc-modal-icon">📋</div>
-            <div>
-              <h3 class="tc-modal-title">Terms &amp; Conditions</h3>
-              <p class="tc-modal-sub">Asia Source iCollege Student Portal</p>
-            </div>
-            <button class="modal-close" onclick="closeTcModal()" style="position:relative;top:0;right:0;flex-shrink:0;">✕</button>
-          </div>
-
-          <div class="tc-body" id="tcBody">
-
-            <div class="tc-section">
-              <h4>1. Acceptance of Terms</h4>
-              <p>By creating an account on the Asia Source iCollege Student Portal, you agree to be bound by these Terms and Conditions, our Privacy Policy, and all applicable school regulations. If you do not agree with any of these terms, you may not register or use this portal.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>2. Account Eligibility &amp; Registration</h4>
-              <p>Access to this portal is exclusively for currently enrolled students and registered faculty of Asia Source iCollege. You must provide accurate, complete, and current information during registration. Use of false identity or misrepresentation of student/faculty status is strictly prohibited and may result in permanent account suspension.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>3. Account Security &amp; Password</h4>
-              <p>Your password is your birthday in YYYY-MM-DD format. You are solely responsible for maintaining the confidentiality of your credentials. You must not share your login credentials with any other person. Asia Source iCollege will not be held liable for any unauthorized access resulting from your failure to secure your account. Notify school administration immediately if you suspect unauthorized use.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>4. Privacy &amp; Data Collection</h4>
-              <p>Asia Source iCollege collects personal information including your name, birthday, strand/section, and academic records solely for educational and administrative purposes. Your data will never be sold, shared, or disclosed to third parties without your explicit consent, except as required by law or school policy. Academic records stored in this portal are confidential and protected.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>5. Academic Integrity</h4>
-              <p>Grade records and academic data visible in this portal are official school records. Any attempt to manipulate, falsify, or tamper with academic data, including grades and attendance records, is a serious violation of academic integrity and may result in disciplinary action including expulsion and legal proceedings under the Education Act of the Philippines.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>6. Acceptable Use Policy</h4>
-              <p>This portal is provided solely for academic and administrative purposes. You agree not to use this system for any unlawful purpose, to harass or harm other users, to attempt unauthorized access to other accounts, or to interfere with system operations. Violations may result in immediate account termination and referral to school authorities.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>7. Intellectual Property</h4>
-              <p>All content, design, and functionality of this portal — including academic materials, grade systems, and branding — are the intellectual property of Asia Source iCollege. You may not reproduce, distribute, or create derivative works without written permission from school administration.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>8. Portal Availability</h4>
-              <p>Asia Source iCollege makes no warranty that the portal will be available at all times. Scheduled maintenance and unforeseen outages may occur. The school reserves the right to modify, suspend, or terminate the portal or your access at any time without prior notice, consistent with school policy.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>9. Changes to Terms</h4>
-              <p>Asia Source iCollege reserves the right to update these Terms and Conditions at any time. Continued use of the portal after changes constitutes acceptance of the updated terms. Students will be notified of material changes through official school communication channels.</p>
-            </div>
-
-            <div class="tc-section">
-              <h4>10. Governing Law</h4>
-              <p>These Terms and Conditions are governed by the laws of the Republic of the Philippines, and the rules and regulations of Asia Source iCollege. Any disputes arising from portal use shall be subject to the jurisdiction of the appropriate school disciplinary bodies and, if necessary, Philippine courts.</p>
-            </div>
-
-          </div><!-- end tc-body -->
-
-          <div class="tc-footer">
-            <div class="tc-scroll-hint" id="tcScrollHint">📜 Please scroll to read all terms before accepting</div>
-            <button class="tc-accept-btn" id="tcAcceptBtn" onclick="acceptTc()" disabled>
-              <span>✅ I Accept All Terms &amp; Conditions</span>
-            </button>
-          </div>
-        </div>
       </div>
 
-    </div><!-- end lp-card -->
-  </div><!-- end lp-right -->
+      <!-- TERMS & CONDITIONS MODAL — FULLSCREEN OUTSIDE CARD -->
+    </div>
+  </div>
+</div>
 
-</div><!-- end loginPage -->
+<!-- ══════ TERMS & CONDITIONS MODAL — FULL PAGE ══════ -->
+<div class="tc-modal-overlay hidden" id="tcModal">
+  <div class="tc-modal-card tc-modal-fullscreen">
+    <div class="tc-modal-head">
+      <div class="tc-modal-icon">📋</div>
+      <div>
+        <h3 class="tc-modal-title">Terms &amp; Conditions</h3>
+        <p class="tc-modal-sub">Asia Source iCollege Student Portal</p>
+      </div>
+      <button class="modal-close" onclick="closeTcModal()" style="position:relative;top:0;right:0;flex-shrink:0;">✕</button>
+    </div>
+    <div class="tc-body" id="tcBody">
+      <div class="tc-section"><h4>1. Acceptance of Terms</h4><p>By creating an account on the Asia Source iCollege Student Portal, you agree to be bound by these Terms and Conditions, our Privacy Policy, and all applicable school regulations. If you do not agree with any of these terms, you may not register or use this portal.</p></div>
+      <div class="tc-section"><h4>2. Account Eligibility &amp; Registration</h4><p>Access to this portal is exclusively for currently enrolled students and registered faculty of Asia Source iCollege. You must provide accurate, complete, and current information during registration. Use of false identity or misrepresentation of student/faculty status is strictly prohibited and may result in permanent account suspension.</p></div>
+      <div class="tc-section"><h4>3. Account Security &amp; Password</h4><p>Your password is your birthday in YYYY-MM-DD format. You are solely responsible for maintaining the confidentiality of your credentials. You must not share your login credentials with any other person. Asia Source iCollege will not be held liable for any unauthorized access resulting from your failure to secure your account. Notify school administration immediately if you suspect unauthorized use.</p></div>
+      <div class="tc-section"><h4>4. Privacy &amp; Data Collection</h4><p>Asia Source iCollege collects personal information including your name, birthday, strand/section, and academic records solely for educational and administrative purposes. Your data will never be sold, shared, or disclosed to third parties without your explicit consent, except as required by law or school policy. Academic records stored in this portal are confidential and protected.</p></div>
+      <div class="tc-section"><h4>5. Academic Integrity</h4><p>Grade records and academic data visible in this portal are official school records. Any attempt to manipulate, falsify, or tamper with academic data, including grades and attendance records, is a serious violation of academic integrity and may result in disciplinary action including expulsion and legal proceedings under the Education Act of the Philippines.</p></div>
+      <div class="tc-section"><h4>6. Acceptable Use Policy</h4><p>This portal is provided solely for academic and administrative purposes. You agree not to use this system for any unlawful purpose, to harass or harm other users, to attempt unauthorized access to other accounts, or to interfere with system operations. Violations may result in immediate account termination and referral to school authorities.</p></div>
+      <div class="tc-section"><h4>7. Intellectual Property</h4><p>All content, design, and functionality of this portal — including academic materials, grade systems, and branding — are the intellectual property of Asia Source iCollege. You may not reproduce, distribute, or create derivative works without written permission from school administration.</p></div>
+      <div class="tc-section"><h4>8. Portal Availability</h4><p>Asia Source iCollege makes no warranty that the portal will be available at all times. Scheduled maintenance and unforeseen outages may occur. The school reserves the right to modify, suspend, or terminate the portal or your access at any time without prior notice, consistent with school policy.</p></div>
+      <div class="tc-section"><h4>9. Changes to Terms</h4><p>Asia Source iCollege reserves the right to update these Terms and Conditions at any time. Continued use of the portal after changes constitutes acceptance of the updated terms. Students will be notified of material changes through official school communication channels.</p></div>
+      <div class="tc-section"><h4>10. Governing Law</h4><p>These Terms and Conditions are governed by the laws of the Republic of the Philippines, and the rules and regulations of Asia Source iCollege. Any disputes arising from portal use shall be subject to the jurisdiction of the appropriate school disciplinary bodies and, if necessary, Philippine courts.</p></div>
+    </div>
+    <div class="tc-footer">
+      <div class="tc-scroll-hint" id="tcScrollHint">📜 Please scroll to read all terms before accepting</div>
+      <button class="tc-accept-btn" id="tcAcceptBtn" onclick="acceptTc()" disabled>
+        <span>✅ I Accept All Terms &amp; Conditions</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════ STUDENT DASHBOARD ══════ -->
 <div id="studentDash" class="page hidden">
@@ -352,7 +258,10 @@
         </div>
       </aside>
       <div class="stu-main">
-        <div class="sec-title">📚 My Subjects</div>
+        <div class="stu-subjects-header">
+          <div class="sec-title">📚 My Subjects</div>
+          <button class="btn-add-subject" onclick="openAddSubjectModal()">➕ Add Subject</button>
+        </div>
         <div id="subjectList" class="subject-list"></div>
         <div class="sec-title">📋 Grade Card</div>
         <div class="grade-card">
@@ -375,14 +284,23 @@
     </div>
     <div class="nav-right">
       <button class="dm-nav-btn" onclick="toggleDark()"><span id="dmNavIcon2">🌙</span></button>
+      <!-- Notification bell -->
+      <div class="notif-wrap" style="position:relative;">
+        <button class="notif-bell-btn" onclick="openTeacherNotifPanel()" title="Notifications">
+          🔔
+          <span class="notif-badge hidden" id="tchNotifBadge">0</span>
+        </button>
+        <!-- Notification panel dropdown -->
+        <div class="teacher-notif-panel hidden" id="teacherNotifPanel"></div>
+      </div>
+      <!-- Add Student Button -->
+      <button class="btn-add-student" onclick="openAddStudentModal()">➕ Add Student</button>
       <div class="user-pill"><div class="uavatar t">T</div><span id="tchName">Teacher</span></div>
       <button class="btn-logout" onclick="logout()">Log Out</button>
     </div>
   </nav>
   <div class="dash-body">
     <div class="tch-layout">
-
-      <!-- SIDEBAR -->
       <aside class="tch-sidebar">
         <div class="profile-card clickable-profile" onclick="openProfileModal()" title="Click to view/edit profile">
           <div class="pc-avatar-wrap">
@@ -396,30 +314,13 @@
         </div>
         <div class="sidebar-section-lbl">Strand Folders</div>
         <div class="strand-list" id="strandList">
-          <div class="strand-item active" data-strand="HUMSS" onclick="openFolder(this)">
-            <span class="si-icon">📁</span>
-            <div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div>
-          </div>
-          <div class="strand-item" data-strand="STEM" onclick="openFolder(this)">
-            <span class="si-icon">📁</span>
-            <div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div>
-          </div>
-          <div class="strand-item" data-strand="HE-HO" onclick="openFolder(this)">
-            <span class="si-icon">📁</span>
-            <div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div>
-          </div>
-          <div class="strand-item" data-strand="ICT" onclick="openFolder(this)">
-            <span class="si-icon">📁</span>
-            <div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div>
-          </div>
-          <div class="strand-item" data-strand="ABM" onclick="openFolder(this)">
-            <span class="si-icon">📁</span>
-            <div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div>
-          </div>
+          <div class="strand-item active" data-strand="HUMSS" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">HUMSS</div><div class="si-sub">Section A &amp; B</div></div></div>
+          <div class="strand-item" data-strand="STEM" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">STEM</div><div class="si-sub">Section A &amp; B</div></div></div>
+          <div class="strand-item" data-strand="HE-HO" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">H.E-H.O</div><div class="si-sub">Section A &amp; B</div></div></div>
+          <div class="strand-item" data-strand="ICT" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ICT - CP</div><div class="si-sub">Student List</div></div></div>
+          <div class="strand-item" data-strand="ABM" onclick="openFolder(this)"><span class="si-icon">📁</span><div><div class="si-name">ABM</div><div class="si-sub">Student List</div></div></div>
         </div>
       </aside>
-
-      <!-- MAIN CONTENT -->
       <div class="tch-main">
         <div class="tch-header">
           <div class="tch-header-left">
@@ -438,7 +339,6 @@
             </div>
           </div>
         </div>
-
         <!-- GRADEBOOK VIEW -->
         <div id="viewGradebook" class="tch-view">
           <div id="gbToolbar" class="view-toolbar"></div>
@@ -479,15 +379,11 @@
             <span>Below 75: Did Not Meet Expectations</span>
           </div>
         </div>
-
         <!-- CLASS RECORD VIEW -->
         <div id="viewClassRecord" class="tch-view hidden">
           <div id="crToolbar" class="view-toolbar"></div>
           <div class="cr-scroll-wrap">
-            <table class="cr-table">
-              <thead id="crHead"></thead>
-              <tbody id="crBody"></tbody>
-            </table>
+            <table class="cr-table"><thead id="crHead"></thead><tbody id="crBody"></tbody></table>
           </div>
           <div class="legend-bar">
             <span>90–100: Outstanding</span><span>85–89: Very Satisfactory</span>
@@ -495,7 +391,6 @@
             <span>Below 75: Did Not Meet Expectations</span>
           </div>
         </div>
-
         <!-- ATTENDANCE VIEW -->
         <div id="viewAttendance" class="tch-view hidden">
           <div class="att-legend">
@@ -505,13 +400,7 @@
             <span class="att-hint">Type P, A, or L in each cell</span>
           </div>
           <div class="cr-scroll-wrap">
-            <table class="cr-table">
-              <thead>
-                <tr id="attMonthRow"></tr>
-                <tr id="attDayRow"></tr>
-              </thead>
-              <tbody id="attBody"></tbody>
-            </table>
+            <table class="cr-table"><thead><tr id="attMonthRow"></tr><tr id="attDayRow"></tr></thead><tbody id="attBody"></tbody></table>
           </div>
         </div>
       </div>
@@ -529,11 +418,28 @@
   </div>
 </div>
 
+<!-- ══════ ADD SUBJECT MODAL — STUDENT ══════ -->
+<div class="modal-overlay hidden" id="addSubjectModal" onclick="if(event.target===this)closeAddSubjectModal()">
+  <div class="modal-card add-subj-modal-card">
+    <button class="modal-close" onclick="closeAddSubjectModal()">✕</button>
+    <h3 class="modal-title">📚 Enroll in Subject</h3>
+    <p class="modal-sub">Select a subject and choose your teacher</p>
+    <div id="addSubjectContent"></div>
+  </div>
+</div>
+
+<!-- ══════ ADD STUDENT MODAL — TEACHER ══════ -->
+<div class="modal-overlay hidden" id="addStudentModal" onclick="if(event.target===this)closeAddStudentModal()">
+  <div class="modal-card add-stu-modal-card">
+    <button class="modal-close" onclick="closeAddStudentModal()">✕</button>
+    <div id="addStudentContent"></div>
+  </div>
+</div>
+
 <!-- ══════ PROFILE MODAL ══════ -->
 <div class="modal-overlay hidden" id="profileModal" onclick="if(event.target===this)closeProfileModal()">
   <div class="modal-card profile-modal-card">
     <button class="modal-close" onclick="closeProfileModal()">✕</button>
-
     <div class="pm-header">
       <div class="pm-avatar-wrap">
         <div class="pm-avatar-ring-2"></div>
@@ -546,119 +452,58 @@
         <div class="pm-email-display" id="pmEmailDisplay">—</div>
       </div>
     </div>
-
     <div class="pm-tabs">
       <button class="pm-tab active" id="pmTabInfo" onclick="switchPmTab('info',this)">👤 Profile Info</button>
       <button class="pm-tab" id="pmTabPass" onclick="switchPmTab('password',this)">🔐 Reset Password</button>
     </div>
-
     <!-- PROFILE INFO -->
     <div id="pmPanelInfo" class="pm-panel">
       <div class="alert hidden" id="pmInfoAlert"></div>
       <div class="alert success hidden" id="pmInfoSuccess"></div>
       <div class="pm-info-grid">
-        <div class="pm-info-item">
-          <div class="pm-info-icon">🪪</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Student ID</div><div class="pm-info-val" id="pmInfoStudentId">—</div></div>
-        </div>
-        <div class="pm-info-item">
-          <div class="pm-info-icon">⚧</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Gender</div><div class="pm-info-val" id="pmInfoGender">—</div></div>
-        </div>
-        <div class="pm-info-item">
-          <div class="pm-info-icon">👤</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Full Name</div><div class="pm-info-val" id="pmInfoName">—</div></div>
-        </div>
-        <div class="pm-info-item">
-          <div class="pm-info-icon">🎂</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Date of Birth</div><div class="pm-info-val" id="pmInfoBday">—</div></div>
-        </div>
-        <div class="pm-info-item pm-info-wide">
-          <div class="pm-info-icon">📧</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Email Address</div><div class="pm-info-val" id="pmInfoEmail">—</div></div>
-        </div>
-        <div class="pm-info-item">
-          <div class="pm-info-icon">📱</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Mobile Number</div><div class="pm-info-val" id="pmInfoMobile">—</div></div>
-        </div>
-        <div class="pm-info-item">
-          <div class="pm-info-icon">🎯</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Age</div><div class="pm-info-val" id="pmInfoAge">—</div></div>
-        </div>
-        <div class="pm-info-item pm-info-wide" id="pmStrandItem">
-          <div class="pm-info-icon">📚</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Strand / Section</div><div class="pm-info-val" id="pmInfoStrand">—</div></div>
-        </div>
-        <div class="pm-info-item pm-info-wide" id="pmAddressItem">
-          <div class="pm-info-icon">🏠</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">Home Address</div><div class="pm-info-val" id="pmInfoAddress">—</div></div>
-        </div>
-        <div class="pm-info-item pm-info-wide">
-          <div class="pm-info-icon">🏙️</div>
-          <div class="pm-info-body"><div class="pm-info-lbl">City</div><div class="pm-info-val" id="pmInfoCity">—</div></div>
-        </div>
+        <div class="pm-info-item"><div class="pm-info-icon">🪪</div><div class="pm-info-body"><div class="pm-info-lbl">Student ID</div><div class="pm-info-val" id="pmInfoStudentId">—</div></div></div>
+        <div class="pm-info-item"><div class="pm-info-icon">⚧</div><div class="pm-info-body"><div class="pm-info-lbl">Gender</div><div class="pm-info-val" id="pmInfoGender">—</div></div></div>
+        <div class="pm-info-item"><div class="pm-info-icon">👤</div><div class="pm-info-body"><div class="pm-info-lbl">Full Name</div><div class="pm-info-val" id="pmInfoName">—</div></div></div>
+        <div class="pm-info-item"><div class="pm-info-icon">🎂</div><div class="pm-info-body"><div class="pm-info-lbl">Date of Birth</div><div class="pm-info-val" id="pmInfoBday">—</div></div></div>
+        <div class="pm-info-item pm-info-wide"><div class="pm-info-icon">📧</div><div class="pm-info-body"><div class="pm-info-lbl">Email Address</div><div class="pm-info-val" id="pmInfoEmail">—</div></div></div>
+        <div class="pm-info-item"><div class="pm-info-icon">📱</div><div class="pm-info-body"><div class="pm-info-lbl">Mobile Number</div><div class="pm-info-val" id="pmInfoMobile">—</div></div></div>
+        <div class="pm-info-item"><div class="pm-info-icon">🎯</div><div class="pm-info-body"><div class="pm-info-lbl">Age</div><div class="pm-info-val" id="pmInfoAge">—</div></div></div>
+        <div class="pm-info-item pm-info-wide" id="pmStrandItem"><div class="pm-info-icon">📚</div><div class="pm-info-body"><div class="pm-info-lbl">Strand / Section</div><div class="pm-info-val" id="pmInfoStrand">—</div></div></div>
+        <div class="pm-info-item pm-info-wide" id="pmAddressItem"><div class="pm-info-icon">🏠</div><div class="pm-info-body"><div class="pm-info-lbl">Home Address</div><div class="pm-info-val" id="pmInfoAddress">—</div></div></div>
+        <div class="pm-info-item pm-info-wide"><div class="pm-info-icon">🏙️</div><div class="pm-info-body"><div class="pm-info-lbl">City</div><div class="pm-info-val" id="pmInfoCity">—</div></div></div>
       </div>
       <div class="pm-edit-section">
         <div class="pm-edit-title">✏️ Edit Profile</div>
         <div class="pm-edit-row2">
-          <div class="fg">
-            <label>Full Name</label>
-            <input type="text" id="pmEditName" class="plain-input" placeholder="Your full name">
-          </div>
-          <div class="fg">
-            <label>Gender</label>
-            <select id="pmEditGender" class="plain-input">
-              <option value="">— Select —</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-          </div>
+          <div class="fg"><label>Full Name</label><input type="text" id="pmEditName" class="plain-input" placeholder="Your full name"></div>
+          <div class="fg"><label>Gender</label><select id="pmEditGender" class="plain-input"><option value="">— Select —</option><option value="Male">Male</option><option value="Female">Female</option><option value="Prefer not to say">Prefer not to say</option></select></div>
         </div>
         <div class="pm-edit-row2">
-          <div class="fg">
-            <label>Mobile Number</label>
-            <input type="tel" id="pmEditMobile" class="plain-input" placeholder="e.g. 09XX-XXX-XXXX">
-          </div>
-          <div class="fg">
-            <label>City</label>
-            <input type="text" id="pmEditCity" class="plain-input" placeholder="e.g. Quezon City">
-          </div>
+          <div class="fg"><label>Mobile Number</label><input type="tel" id="pmEditMobile" class="plain-input" placeholder="e.g. 09XX-XXX-XXXX"></div>
+          <div class="fg"><label>City</label><input type="text" id="pmEditCity" class="plain-input" placeholder="e.g. Quezon City"></div>
         </div>
-        <div class="fg">
-          <label>Home Address</label>
-          <input type="text" id="pmEditAddress" class="plain-input" placeholder="e.g. 123 Rizal St., Barangay...">
-        </div>
+        <div class="fg"><label>Home Address</label><input type="text" id="pmEditAddress" class="plain-input" placeholder="e.g. 123 Rizal St., Barangay..."></div>
         <div class="fg" id="pmEditStrandFg" style="display:none">
           <label>Strand &amp; Section</label>
           <select id="pmEditStrand" class="plain-input">
             <option value="">Select strand</option>
             <optgroup label="GRADE 11">
-              <option value="G11-HUMSS-A">G11 | HUMSS | Section A</option>
-              <option value="G11-HUMSS-B">G11 | HUMSS | Section B</option>
-              <option value="G11-STEM-A">G11 | STEM | Section A</option>
-              <option value="G11-STEM-B">G11 | STEM | Section B</option>
-              <option value="G11-HEHO-A">G11 | H.E-H.O | Section A</option>
-              <option value="G11-HEHO-B">G11 | H.E-H.O | Section B</option>
-              <option value="G11-ICT-A">G11 | ICT-CP</option>
-              <option value="G11-ABM-A">G11 | ABM</option>
+              <option value="G11-HUMSS-A">G11 | HUMSS | Section A</option><option value="G11-HUMSS-B">G11 | HUMSS | Section B</option>
+              <option value="G11-STEM-A">G11 | STEM | Section A</option><option value="G11-STEM-B">G11 | STEM | Section B</option>
+              <option value="G11-HEHO-A">G11 | H.E-H.O | Section A</option><option value="G11-HEHO-B">G11 | H.E-H.O | Section B</option>
+              <option value="G11-ICT-A">G11 | ICT-CP</option><option value="G11-ABM-A">G11 | ABM</option>
             </optgroup>
             <optgroup label="GRADE 12">
-              <option value="G12-HUMSS-A">G12 | HUMSS | Section A</option>
-              <option value="G12-HUMSS-B">G12 | HUMSS | Section B</option>
-              <option value="G12-STEM-A">G12 | STEM | Section A</option>
-              <option value="G12-STEM-B">G12 | STEM | Section B</option>
-              <option value="G12-HEHO-A">G12 | H.E-H.O | Section A</option>
-              <option value="G12-HEHO-B">G12 | H.E-H.O | Section B</option>
-              <option value="G12-ICT-A">G12 | ICT-CP</option>
-              <option value="G12-ABM-A">G12 | ABM</option>
+              <option value="G12-HUMSS-A">G12 | HUMSS | Section A</option><option value="G12-HUMSS-B">G12 | HUMSS | Section B</option>
+              <option value="G12-STEM-A">G12 | STEM | Section A</option><option value="G12-STEM-B">G12 | STEM | Section B</option>
+              <option value="G12-HEHO-A">G12 | H.E-H.O | Section A</option><option value="G12-HEHO-B">G12 | H.E-H.O | Section B</option>
+              <option value="G12-ICT-A">G12 | ICT-CP</option><option value="G12-ABM-A">G12 | ABM</option>
             </optgroup>
           </select>
         </div>
         <button class="btn-red" onclick="saveProfileInfo()">💾 Save Profile</button>
       </div>
     </div>
-
     <!-- RESET PASSWORD -->
     <div id="pmPanelPass" class="pm-panel hidden">
       <div class="alert hidden" id="pmPassAlert"></div>
@@ -667,27 +512,9 @@
         <div class="pm-pass-icon">🔐</div>
         <p>Enter your current password, then choose your new password. You can use any password you like.</p>
       </div>
-      <div class="fg">
-        <label>Current Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="pmCurrPass" class="plain-input" placeholder="Your current password" style="padding-right:44px">
-          <button type="button" class="pw-eye" onclick="togglePass('pmCurrPass')">👁</button>
-        </div>
-      </div>
-      <div class="fg">
-        <label>New Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="pmNewPass" class="plain-input" placeholder="Choose any new password" style="padding-right:44px">
-          <button type="button" class="pw-eye" onclick="togglePass('pmNewPass')">👁</button>
-        </div>
-      </div>
-      <div class="fg">
-        <label>Confirm New Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="pmConfPass" class="plain-input" placeholder="Repeat your new password" style="padding-right:44px">
-          <button type="button" class="pw-eye" onclick="togglePass('pmConfPass')">👁</button>
-        </div>
-      </div>
+      <div class="fg"><label>Current Password</label><div class="pw-wrap"><input type="password" id="pmCurrPass" class="plain-input" placeholder="Your current password" style="padding-right:44px"><button type="button" class="pw-eye" onclick="togglePass('pmCurrPass')">👁</button></div></div>
+      <div class="fg"><label>New Password</label><div class="pw-wrap"><input type="password" id="pmNewPass" class="plain-input" placeholder="Choose any new password" style="padding-right:44px"><button type="button" class="pw-eye" onclick="togglePass('pmNewPass')">👁</button></div></div>
+      <div class="fg"><label>Confirm New Password</label><div class="pw-wrap"><input type="password" id="pmConfPass" class="plain-input" placeholder="Repeat your new password" style="padding-right:44px"><button type="button" class="pw-eye" onclick="togglePass('pmConfPass')">👁</button></div></div>
       <button class="btn-red" onclick="saveNewPassword()">🔐 Reset Password</button>
     </div>
   </div>
