@@ -7,83 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <!-- FIX: Manage Subjects modal scroll fix -->
-  <style>
-    /* ── MANAGE SUBJECTS MODAL: allow full scroll ── */
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card {
-      max-width: 740px !important;
-      max-height: 90vh !important;
-      overflow: hidden !important;
-      display: flex !important;
-      flex-direction: column !important;
-      padding: 0 !important;
-    }
-    /* Modal title area — fixed at top */
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card > .modal-close,
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card > .modal-title,
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card > .modal-sub {
-      flex-shrink: 0 !important;
-      position: relative !important;
-      padding-left: 28px !important;
-      padding-right: 28px !important;
-    }
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card > .modal-title {
-      padding-top: 24px !important;
-      margin-bottom: 4px !important;
-    }
-    #tchSubjectMgrModal .modal-card.tch-subj-mgr-card > .modal-sub {
-      margin-bottom: 10px !important;
-    }
-    /* Content area — scrollable */
-    #tchSubjectMgrContent {
-      flex: 1 !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      padding: 0 !important;
-      min-height: 0 !important;
-    }
-    /* tsm3-wrap fills the content area */
-    .tsm3-wrap {
-      display: flex !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
-    }
-    /* tsm3 catalog is scrollable */
-    .tsm3-catalog {
-      flex: 1 !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      min-height: 150px !important;
-      max-height: calc(90vh - 380px) !important;
-      padding: 8px 20px 20px !important;
-    }
-
-    /* ── STUDENT ACCOUNT: Profile photo area fix ── */
-    #stuPcPhotoWrap.hidden { display: none !important; }
-
-    /* ── ADD SUBJECT MODAL scroll fix for student ── */
-    #addSubjectModal .modal-card.add-subj-modal-card {
-      max-height: 90vh !important;
-      overflow: hidden !important;
-      display: flex !important;
-      flex-direction: column !important;
-    }
-    #addSubjectContent {
-      flex: 1 !important;
-      overflow-y: auto !important;
-      min-height: 0 !important;
-    }
-    .asj-catalog {
-      max-height: 340px !important;
-      overflow-y: auto !important;
-    }
-
-    /* ── Subject Modal scroll fix ── */
-    #subjectModal .modal-card {
-      max-height: 90vh !important;
-      overflow-y: auto !important;
-    }
-  </style>
+  <link rel="stylesheet" href="light_mode_patch.css">
 </head>
 <body>
 
@@ -326,7 +250,6 @@
         <div class="profile-card clickable-profile" onclick="openProfileModal()" title="Click to view/edit profile">
           <div class="pc-avatar-wrap" id="stuAvatarWrap">
             <div class="pc-avatar-ring"></div>
-            <!-- FIX: Student photo support in sidebar -->
             <div class="pc-avatar" id="stuAvatarEmoji">🎓</div>
             <div id="stuPcPhotoWrap" class="hidden" style="width:72px;height:72px;border-radius:50%;overflow:hidden;position:relative;z-index:2;">
               <img id="stuPcPhoto" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;">
@@ -551,7 +474,6 @@
         <div class="pm-avatar-ring-2"></div>
         <div class="pm-avatar-ring"></div>
         <div class="pm-avatar" id="pmAvatar">🎓</div>
-        <!-- FIX: Photo overlay in profile modal -->
         <div id="pmPhotoOverlay" class="hidden" style="position:absolute;inset:0;border-radius:50%;overflow:hidden;z-index:3;">
           <img id="pmPhotoImg" src="" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;">
         </div>
@@ -626,7 +548,6 @@
       <div class="fg"><label>Confirm New Password</label><div class="pw-wrap"><input type="password" id="pmConfPass" class="plain-input" placeholder="Repeat your new password" style="padding-right:44px"><button type="button" class="pw-eye" onclick="togglePass('pmConfPass')">👁</button></div></div>
       <button class="btn-red" onclick="saveNewPassword()">🔐 Reset Password</button>
     </div>
-    <!-- FIX: Photo panel for student profile modal -->
     <div id="pmPanelPhoto" class="pm-panel hidden">
       <div style="text-align:center;padding:16px 0 8px;">
         <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload a profile photo (JPG/PNG, max ~2MB)</div>
@@ -649,7 +570,6 @@
 </div>
 
 <!-- ══ TEACHER SUBJECT MANAGER MODAL ══ -->
-<!-- FIX: Changed structure so content area is properly scrollable -->
 <div class="modal-overlay hidden" id="tchSubjectMgrModal" onclick="if(event.target===this)closeTchSubjectMgr()">
   <div class="modal-card tch-subj-mgr-card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;max-width:740px;">
     <button class="modal-close" onclick="closeTchSubjectMgr()">✕</button>
