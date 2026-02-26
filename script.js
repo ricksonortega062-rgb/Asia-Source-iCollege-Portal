@@ -2785,6 +2785,46 @@ function saveQuarterGrades(classKey) {
   showToast(saved > 0 ? '💾 [' + currentGbSubject + '] ' + currentQuarter.toUpperCase() + ' — ' + saved + ' grade(s) saved! ✅' : '⚠️ No scores found. Enter scores first.', saved > 0 ? 'success' : 'warning');
   renderGradebook(currentFolder, currentSection);
 }
+function goHome() {
+  if (currentUser) {
+    if (currentRole === 'student') {
+      loadStudentDash(currentUser);
+      setTimeout(function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    } else {
+      // Navigate to HUMSS G11
+      currentFolder = 'HUMSS';
+      currentGradeLevel = 'G11';
+
+      // Highlight correct strand item in sidebar
+      var items = document.querySelectorAll('.strand-item');
+      for (var i = 0; i < items.length; i++) {
+        items[i].className = 'strand-item';
+        if (items[i].getAttribute('data-strand') === 'HUMSS' &&
+            items[i].getAttribute('data-grade') === 'G11') {
+          items[i].className = 'strand-item active';
+        }
+      }
+
+      openFolderByStrand('HUMSS', 'G11');
+
+      setTimeout(function() {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+      }, 200);
+    }
+    return;
+  }
+  var stuDash = document.getElementById('studentDash');
+  var tchDash = document.getElementById('teacherDash');
+  var loginPage = document.getElementById('loginPage');
+  if (stuDash) stuDash.classList.add('hidden');
+  if (tchDash) tchDash.classList.add('hidden');
+  if (loginPage) loginPage.classList.remove('hidden');
+  if (typeof applyLoginDark === 'function') applyLoginDark();
+}
 
 // ══ INIT ══
 (function init(){
@@ -2824,3 +2864,4 @@ function saveQuarterGrades(classKey) {
     }draw();
   })();
 })();
+
