@@ -2285,6 +2285,507 @@ document.addEventListener("keydown",function(e){
   }
 });
 
+// ══ DYNAMIC SCORE SETTINGS ══
+// Each group stores an array of {key, label, max}
+// Keys are auto-generated: quiz_0, quiz_1, act_0, proj_0, exam_0, etc.
+
+var LS_SCORE_SETTINGS_V2 = "asiasource_score_settings_v2";
+
+var DEFAULT_SCORE_GROUPS = {
+  quiz:     { weight: 25, items: [{label:"Quiz 1", max:20},{label:"Quiz 2", max:20},{label:"Quiz 3", max:20}] },
+  activity: { weight: 25, items: [{label:"Activity 1", max:20},{label:"Activity 2", max:20},{label:"Activity 3", max:20}] },
+  project:  { weight: 25, items: [{label:"Project 1", max:50},{label:"Project 2", max:50}] },
+  exam:     { weight: 25, items: [{label:"Exam", max:100}] }
+};
+
+var scoreGroups = JSON.parse(JSON.stringify(DEFAULT_SCORE_GROUPS));
+
+function loadScoreGroupSettings() {
+  try {
+    var r = localStorage.getItem(LS_SCORE_SETTINGS_V2);
+    if (r) {
+      var d = JSON.parse(r);
+      if (d && d.quiz && d.activity && d.project && d.exam) {
+        scoreGroups = d;
+        return;
+      }
+    }
+  } catch(e) {}
+  scoreGroups = JSON.parse(JSON.stringify(DEFAULT_SCORE_GROUPS));
+}
+
+function saveScoreGroupSettings() {
+  try { localStorage.setItem(LS_SCORE_SETTINGS_V2, JSON.stringify(scoreGroups)); } catch(e) {}
+}
+
+loadScoreGroupSettings();
+
+// ── Helpers to access dynamic groups ──
+function getGroupItems(groupId) {
+  return (scoreGroups[groupId] && scoreGroups[groupId].items) ? scoreGroups[groupId].items : [];
+}
+function getGroupWeight(groupId) {
+  return (scoreGroups[groupId] && scoreGroups[groupId].weight) ? scoreGroups[groupId].weight : 25;
+}
+function getItemMax(groupId, idx) {
+  var items = getGroupItems(groupId);
+  return (items[idx] && items[idx].max) ? items[idx].max : 20;
+}
+function getAllScoreComponents() {
+  // Returns flat array of {groupId, idx, label, max, storeKey}
+  var out = [];
+  ['quiz','activity','project','exam'].forEach(function(gid) {
+    var items = getGroupItems(gid);
+    items.forEach(function(item, idx) {
+      out.push({ groupId: gid, idx: idx, label: item.label, max: item.max, storeKey: gid + '_' + idx });
+    });
+  });
+  return out;
+}
+
+// ══ SCORE SETTINGS MODAL — DYNAMIC ══
+function openScoreSettingsModal() {
+  renderScoreSettingsModal();
+  var modal = document.getElementById("scoreSettingsModal");
+  if (modal) { modal.classList.remove("hidden"); document.body.style.overflow = "hidden"; }
+}
+function closeScoreSettingsModal() {
+  var modal = document.getElementById("scoreSettingsModal");
+  if (modal) { modal.classList.add("hidden"); document.body.style.overflow = ""; }
+}
+
+var GROUP_META = {
+  quiz:     { label: '📝 Quizzes',    color: '#0ea5e9', defaultLabel: 'Quiz',     defaultMax: 20  },
+  activity: { label: '🎯 Activities', color: '#10b981', defaultLabel: 'Activity', defaultMax: 20  },
+  project:  { label: '📁 Projects',   color: '#f59e0b', defaultLabel: 'Project',  defaultMax: 50  },
+  exam:     { label: '📄 Exams',      color: '#e8000f', defaultLabel: 'Exam',     defaultMax: 100 }
+};
+
+function renderScoreSettingsModal() {
+  var groups = ['quiz','activity','project','exam'];
+  var totalWeight = groups.reduce(function(sum, gid) { return sum + getGroupWeight(gid); }, 0);
+  var totalOk = totalWeight === 100;
+
+  var html = '';
+
+  // Weight summary bar
+  html += '<div class="sm-weight-summary" id="smWeightSummary">';
+  html += '<div class="sm-weight-bar-wrap">';
+  groups.forEach(function(gid) {
+    var w = getGroupWeight(gid), meta = GROUP_META[gid];
+    html += '<div class="sm-weight-bar-seg" style="width:' + w + '%;background:' + meta.color + ';" title="' + meta.label + ': ' + w + '%"></div>';
+  });
+  html += '</div>';
+  html += '<div class="sm-weight-total ' + (totalOk ? 'sm-weight-ok' : 'sm-weight-err') + '" id="smWeightTotal">';
+  html += 'Total Weight: <strong>' + totalWeight + '%</strong>' + (totalOk ? ' ✅' : ' ⚠️ Must equal 100%');
+  html += '</div></div>';
+
+  groups.forEach(function(gid) {
+    var meta = GROUP_META[gid];
+    var items = getGroupItems(gid);
+    var w = getGroupWeight(gid);
+
+    html += '<div class="sm-settings-section">';
+    html += '<div class="sm-settings-section-hdr" style="color:' + meta.color + ';">' + meta.label;
+    html += '<div class="sm-weight-input-wrap">';
+    html += '<span class="sm-weight-input-label">Weight:</span>';
+    html += '<input class="sm-weight-input" type="number" min="0" max="100" value="' + w + '" id="weight_' + gid + '" oninput="onWeightChange()" style="border-color:' + meta.color + '55;color:' + meta.color + ';">';
+    html += '<span class="sm-weight-pct-sign" style="color:' + meta.color + ';">%</span>';
+    html += '</div></div>';
+
+    html += '<div class="sm-settings-rows" id="smRows_' + gid + '">';
+    items.forEach(function(item, idx) {
+      html += _renderScoreRow(gid, idx, item, meta);
+    });
+    html += '</div>';
+
+    // Add button
+    html += '<div style="padding:8px 16px 14px;">';
+    html += '<button class="sm-add-comp-btn" style="border-color:' + meta.color + '44;color:' + meta.color + ';" onclick="addScoreComponent(\'' + gid + '\')">';
+    html += '＋ Add ' + meta.defaultLabel + '</button>';
+    html += '</div>';
+
+    html += '</div>';
+  });
+
+  var bodyEl = document.getElementById("scoreSettingsBody");
+  if (bodyEl) bodyEl.innerHTML = html;
+}
+
+function _renderScoreRow(gid, idx, item, meta) {
+  if (!meta) meta = GROUP_META[gid];
+  var items = getGroupItems(gid);
+  var canDelete = items.length > 1 || (gid === 'exam' && items.length > 1);
+  var html = '<div class="sm-settings-row" id="smRow_' + gid + '_' + idx + '">';
+  html += '<div class="sm-settings-row-icon" style="color:' + meta.color + ';">✏️</div>';
+  html += '<div style="flex:1;">';
+  // Editable label
+  html += '<input class="sm-comp-label-input" type="text" value="' + (item.label || '') + '" ';
+  html += 'id="label_' + gid + '_' + idx + '" ';
+  html += 'placeholder="' + meta.defaultLabel + ' ' + (idx+1) + '" ';
+  html += 'style="border-color:' + meta.color + '33;" ';
+  html += 'oninput="updateCompLabel(\'' + gid + '\',' + idx + ',this.value)">';
+  html += '</div>';
+  html += '<div class="sm-settings-max-wrap">';
+  html += '<span class="sm-settings-max-label">Max:</span>';
+  html += '<input class="sm-settings-max-input" type="number" min="1" max="9999" value="' + item.max + '" ';
+  html += 'id="max_' + gid + '_' + idx + '" ';
+  html += 'oninput="updateCompMax(\'' + gid + '\',' + idx + ',this.value)">';
+  html += '</div>';
+  if (canDelete) {
+    html += '<button class="sm-del-comp-btn" onclick="deleteScoreComponent(\'' + gid + '\',' + idx + ')" title="Delete">';
+    html += '🗑️</button>';
+  } else {
+    html += '<div style="width:32px;"></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function addScoreComponent(gid) {
+  var meta = GROUP_META[gid];
+  var items = getGroupItems(gid);
+  var newLabel = meta.defaultLabel + ' ' + (items.length + 1);
+  var newMax = meta.defaultMax;
+  scoreGroups[gid].items.push({ label: newLabel, max: newMax });
+  saveScoreGroupSettings();
+
+  // Re-render just this group's rows + add btn area
+  var rowsEl = document.getElementById('smRows_' + gid);
+  if (rowsEl) {
+    var newItems = getGroupItems(gid);
+    var rowsHtml = '';
+    newItems.forEach(function(item, idx) {
+      rowsHtml += _renderScoreRow(gid, idx, item, meta);
+    });
+    rowsEl.innerHTML = rowsHtml;
+  }
+  showToast('➕ ' + newLabel + ' added!', 'success');
+}
+
+function deleteScoreComponent(gid, idx) {
+  var items = getGroupItems(gid);
+  if (items.length <= 1) {
+    showToast('⚠️ At least one ' + GROUP_META[gid].defaultLabel + ' is required.', 'warning');
+    return;
+  }
+  var deleted = scoreGroups[gid].items.splice(idx, 1);
+  saveScoreGroupSettings();
+
+  var meta = GROUP_META[gid];
+  var rowsEl = document.getElementById('smRows_' + gid);
+  if (rowsEl) {
+    var newItems = getGroupItems(gid);
+    var rowsHtml = '';
+    newItems.forEach(function(item, i) {
+      rowsHtml += _renderScoreRow(gid, i, item, meta);
+    });
+    rowsEl.innerHTML = rowsHtml;
+  }
+  showToast('🗑️ ' + (deleted[0] ? deleted[0].label : 'Component') + ' removed.', 'warning');
+}
+
+function updateCompLabel(gid, idx, val) {
+  if (scoreGroups[gid] && scoreGroups[gid].items[idx]) {
+    scoreGroups[gid].items[idx].label = val;
+  }
+}
+
+function updateCompMax(gid, idx, val) {
+  var n = parseInt(val);
+  if (!isNaN(n) && n > 0 && scoreGroups[gid] && scoreGroups[gid].items[idx]) {
+    scoreGroups[gid].items[idx].max = n;
+  }
+}
+
+function onWeightChange() {
+  var groups = ['quiz','activity','project','exam'];
+  var total = 0;
+  groups.forEach(function(gid) {
+    var inp = document.getElementById('weight_' + gid);
+    if (inp) total += Math.max(0, parseInt(inp.value) || 0);
+  });
+  var totalEl = document.getElementById('smWeightTotal');
+  if (totalEl) {
+    totalEl.className = 'sm-weight-total ' + (total === 100 ? 'sm-weight-ok' : 'sm-weight-err');
+    totalEl.innerHTML = 'Total Weight: <strong>' + total + '%</strong>' + (total === 100 ? ' ✅' : ' ⚠️ Must equal 100%');
+  }
+  var barWrap = document.querySelector('.sm-weight-bar-wrap');
+  if (barWrap) {
+    var segs = barWrap.querySelectorAll('.sm-weight-bar-seg');
+    groups.forEach(function(gid, i) {
+      var inp = document.getElementById('weight_' + gid);
+      var w = inp ? Math.max(0, parseInt(inp.value) || 0) : 0;
+      if (segs[i]) segs[i].style.width = w + '%';
+    });
+  }
+}
+
+function saveScoreSettingsFromModal() {
+  var groups = ['quiz','activity','project','exam'];
+  var errors = [];
+  var totalWeight = 0;
+
+  groups.forEach(function(gid) {
+    // Save weight
+    var wInp = document.getElementById('weight_' + gid);
+    var w = wInp ? parseInt(wInp.value) : 0;
+    if (isNaN(w) || w < 0) w = 0;
+    totalWeight += w;
+    scoreGroups[gid].weight = w;
+
+    // Save each item's label and max
+    var items = getGroupItems(gid);
+    items.forEach(function(item, idx) {
+      var lblInp = document.getElementById('label_' + gid + '_' + idx);
+      var maxInp = document.getElementById('max_' + gid + '_' + idx);
+      if (lblInp && lblInp.value.trim()) item.label = lblInp.value.trim();
+      if (maxInp) {
+        var mx = parseInt(maxInp.value);
+        if (isNaN(mx) || mx < 1) { errors.push(gid + '_' + idx); } else { item.max = mx; }
+      }
+    });
+  });
+
+  if (errors.length > 0) {
+    showToast('⚠️ Please enter valid max scores (min 1) for all fields.', 'warning');
+    return;
+  }
+  if (totalWeight !== 100) {
+    showToast('⚠️ Weights must total exactly 100%. Currently: ' + totalWeight + '%', 'warning');
+    return;
+  }
+
+  saveScoreGroupSettings();
+  closeScoreSettingsModal();
+  if (typeof renderGradebook === 'function') renderGradebook(currentFolder, currentSection);
+  showToast('⚙️ Score settings saved! Gradebook updated.', 'success');
+}
+
+function resetScoreSettings() {
+  scoreGroups = JSON.parse(JSON.stringify(DEFAULT_SCORE_GROUPS));
+  saveScoreGroupSettings();
+  renderScoreSettingsModal();
+  showToast('🔄 Score settings reset to defaults.', 'warning');
+}
+
+// ══ UPDATED computeDetailedGrade — uses dynamic groups ══
+function computeDetailedGrade(sc) {
+  var groups = ['quiz','activity','project','exam'];
+  var parts = [], totalW = 0;
+
+  groups.forEach(function(gid) {
+    var items = getGroupItems(gid);
+    var vals = [];
+    items.forEach(function(item, idx) {
+      var key = gid + '_' + idx;
+      var v = sc[key];
+      if (v !== '' && v !== null && v !== undefined && !isNaN(Number(v))) vals.push({ val: Number(v), max: item.max });
+    });
+    if (!vals.length) return;
+    var pct = 0;
+    vals.forEach(function(v) { pct += (v.val / v.max) * 100; });
+    pct = pct / vals.length;
+    var w = getGroupWeight(gid) / 100;
+    parts.push(pct * w);
+    totalW += w;
+  });
+
+  if (!totalW || !parts.length) return null;
+  var raw = parts.reduce(function(a, b) { return a + b; }, 0) / totalW;
+  return Math.round(Math.min(100, Math.max(60, 60 + (raw / 100) * 40)));
+}
+
+// ══ UPDATED getScores — uses dynamic keys ══
+function getScores(sk, subj, qtr) {
+  var base = { ww:'', pt:'', qe:'', act:'' };
+  // Add dynamic keys
+  ['quiz','activity','project','exam'].forEach(function(gid) {
+    getGroupItems(gid).forEach(function(item, idx) {
+      base[gid + '_' + idx] = '';
+    });
+  });
+  if (!scoreStore[sk]) return base;
+  var sd = scoreStore[sk][subj] || {}, qd = sd[qtr] || {};
+  for (var k in base) { if (qd[k] !== undefined) base[k] = qd[k]; }
+  return base;
+}
+
+// ══ UPDATED renderGradebook — dynamic columns ══
+function renderGradebook(strand, section) {
+  var key = strand + '-' + section;
+  var crSubjs = getCrSubjectsForFolder(strand, currentGradeLevel);
+  var crCols = getCrColorsForFolder(strand, currentGradeLevel);
+  if (!currentGbSubject || crSubjs.indexOf(currentGbSubject) < 0) currentGbSubject = crSubjs[0] || null;
+
+  var components = getAllScoreComponents();
+  var groups = ['quiz','activity','project','exam'];
+
+  // Build settings strip
+  var stripHtml = '<div class="gb-settings-strip">';
+  stripHtml += '<span class="gb-settings-strip-label">⚙️ Max Scores:</span>';
+  groups.forEach(function(gid) {
+    var meta = GROUP_META[gid];
+    var items = getGroupItems(gid);
+    items.forEach(function(item, idx) {
+      var short = item.label.length > 8 ? item.label.slice(0,7)+'…' : item.label;
+      stripHtml += '<span class="gb-settings-chip" title="' + item.label + '" style="border-color:' + meta.color + '33;">' + short + ' <strong>/' + item.max + '</strong></span>';
+    });
+    if (gid !== 'exam') stripHtml += '<span class="gb-settings-chip-sep">·</span>';
+  });
+  stripHtml += '<button class="gb-settings-edit-link" onclick="openScoreSettingsModal()">✏️ Edit</button>';
+  stripHtml += '</div>';
+
+  // Build table header HTML
+  var groupHeaderCells = '';
+  var subHeaderCells = '';
+  var FIXED_COLS = 2; // # and name
+  var TAIL_COLS = 3;  // computed, remarks, subject grade
+
+  groups.forEach(function(gid) {
+    var meta = GROUP_META[gid];
+    var items = getGroupItems(gid);
+    var bgMap = { quiz:'rgba(14,165,233,0.35)', activity:'rgba(16,185,129,0.35)', project:'rgba(245,158,11,0.35)', exam:'rgba(232,0,15,0.35)' };
+    groupHeaderCells += '<th colspan="' + items.length + '" class="gb-group-th" style="background:' + bgMap[gid] + ';">' + meta.label + '</th>';
+    items.forEach(function(item, idx) {
+      var colorMap = { quiz:'#7dd3fc', activity:'#6ee7b7', project:'#fcd34d', exam:'#fca5a5' };
+      subHeaderCells += '<th class="gb-sub-th" style="color:' + colorMap[gid] + ';">' + item.label + '<span class="gb-dynamic-max">/' + item.max + '</span></th>';
+    });
+  });
+
+  var TOTAL_COLS = FIXED_COLS + components.length + TAIL_COLS;
+
+  // Rebuild the entire table structure
+  var tableEl = document.querySelector('#viewGradebook .gb-table');
+  if (tableEl) {
+    tableEl.querySelector('thead').innerHTML =
+      '<tr>' +
+      '<th class="gb-num">#</th>' +
+      '<th class="gb-name">Student Name</th>' +
+      groupHeaderCells +
+      '<th>Computed</th><th>Remarks</th>' +
+      '<th id="gbSubjTh" class="gb-subj-th">' + (currentGbSubject || 'Subject') + ' Grade (' + currentQuarter.toUpperCase() + ')</th>' +
+      '</tr>' +
+      '<tr class="gb-sub-header">' +
+      '<th></th><th></th>' +
+      subHeaderCells +
+      '<th></th><th></th><th></th>' +
+      '</tr>';
+  }
+
+  var toolbar = g("gbToolbar");
+  if (toolbar) {
+    var pillsHtml = '';
+    for (var si = 0; si < crSubjs.length; si++) {
+      var s = crSubjs[si], col = crCols[si % crCols.length], isAct = currentGbSubject === s;
+      pillsHtml += '<button class="subj-btn' + (isAct ? ' active' : '') + '" data-subj="' + s + '"' +
+        ' style="' + (isAct ? 'background:' + col + ';border-color:' + col + ';color:#fff;' : 'border-color:' + col + ';color:' + col + ';') + '"' +
+        " onclick=\"setGbSubject(this.getAttribute('data-subj'))\">" + s + '</button>';
+    }
+    var qtrs = ['q1','q2','q3','q4'];
+    if (qtrs.indexOf(currentQuarter) < 0) currentQuarter = qtrs[0];
+    toolbar.innerHTML = stripHtml +
+      '<div class="gb-toolbar-inner" style="margin-bottom:10px;"><span class="toolbar-lbl">Subject:</span><div class="subj-pills">' + pillsHtml + '<button class="subj-add-btn" onclick="openTchSubjectMgr()" title="Manage Subjects">＋ Add Subject</button></div></div>' +
+      '<div class="gb-toolbar-inner"><span class="toolbar-lbl">Quarter:</span>' +
+      '<div class="qtr-tabs">' + qtrs.map(function(q) { return '<button class="qtr-btn' + (currentQuarter === q ? ' active' : '') + '" onclick="setGbQuarter(\'' + q + '\',this)">' + q.toUpperCase() + '</button>'; }).join('') + '</div>' +
+      '<div class="gb-search-wrap"><span class="gb-search-icon">🔍</span>' +
+      '<input class="gb-search-input" type="text" placeholder="Search student..." value="' + gbSearchQuery + '" oninput="handleGbSearch(this.value)">' +
+      (gbSearchQuery ? '<button class="gb-search-clear" onclick="handleGbSearch(\'\');document.querySelector(\'.gb-search-input\').value=\'\'">✕</button>' : '') +
+      '</div>' +
+      '<button class="save-qtr-btn" onclick="saveQuarterGrades(\'' + key + '\')">💾 Save ' + currentQuarter.toUpperCase() + (currentGbSubject ? ' — ' + currentGbSubject : '') + '</button>' +
+      '</div>';
+  }
+
+  _renderGbRows(key);
+}
+
+// ══ UPDATED _renderGbRows — dynamic columns ══
+function _renderGbRows(key) {
+  var r = getDynamicRoster(key, currentGradeLevel);
+  var tbody = g("gbBody"); tbody.innerHTML = '';
+  var q = gbSearchQuery;
+  var components = getAllScoreComponents();
+  var TAIL_COLS = 3;
+  var TOTAL_COLS = 2 + components.length + TAIL_COLS;
+
+  function matchesSearch(name) { if (!q) return true; return name.toLowerCase().indexOf(q) >= 0; }
+  var rowNum = 0;
+
+  function inp(comp, val, sk) {
+    var mx = comp.max;
+    var da = ' data-sk="' + sk + '" data-subj="' + currentGbSubject + '" data-qtr="' + currentQuarter + '" data-comp="' + comp.storeKey + '" data-max="' + mx + '"';
+    return '<div class="score-input-wrap"><input class="score-input" type="number" min="0" max="' + mx + '" value="' + val + '" placeholder="—"' + da + ' oninput="handleScoreInput(this)"><span class="score-input-max-hint">/' + mx + '</span></div>';
+  }
+
+  function makeRows(entries, genderLabel) {
+    var filtered = [];
+    for (var i = 0; i < entries.length; i++) { if (matchesSearch(entries[i].name)) filtered.push({ entry: entries[i], origIdx: i }); }
+    if (!filtered.length) return;
+    tbody.innerHTML += '<tr><td colspan="' + TOTAL_COLS + '" class="cr-gender-row">' + (genderLabel === 'male' ? '👨 MALE' : '👩 FEMALE') + ' (' + filtered.length + ')</td></tr>';
+    for (var fi = 0; fi < filtered.length; fi++) {
+      var origIdx = filtered[fi].origIdx, entry = filtered[fi].entry, name = entry.name;
+      var sk = getScoreStoreKey(key, genderLabel, origIdx);
+      var sc = getScores(sk, currentGbSubject, currentQuarter);
+      var fg = computeDetailedGrade(sc), bc = fg ? badgeClass(fg) : '';
+      var stuSubjGrade = '—', rgVal = getRosterGrade(key, name, currentGbSubject, currentQuarter);
+      if (rgVal !== '') stuSubjGrade = rgVal;
+      var glBadge = '';
+      if (entry.isRegistered && entry.strand) {
+        var gl = getGradeLevelShort(entry.strand), sn = getStrandName(entry.strand);
+        var isG11 = entry.strand.indexOf('G11') >= 0, glColor = isG11 ? '#0ea5e9' : '#10b981';
+        glBadge = '<span class="gl-badge" style="background:' + glColor + '22;border-color:' + glColor + '55;color:' + glColor + ';">' + gl + '</span><span class="strand-mini">' + sn + '</span>';
+      }
+      var displayName = name;
+      if (q) { var idx2 = name.toLowerCase().indexOf(q); if (idx2 >= 0) displayName = name.slice(0,idx2) + '<mark class="gb-hl">' + name.slice(idx2, idx2+q.length) + '</mark>' + name.slice(idx2+q.length); }
+      rowNum++;
+      var inputCells = '';
+      components.forEach(function(comp) {
+        var val = sc[comp.storeKey] !== undefined ? sc[comp.storeKey] : '';
+        inputCells += '<td>' + inp(comp, val, sk) + '</td>';
+      });
+      tbody.innerHTML += '<tr>' +
+        '<td>' + rowNum + '</td>' +
+        '<td class="gb-name-cell"><div class="student-name-wrap">' + displayName + glBadge + '</div></td>' +
+        inputCells +
+        '<td id="fg-' + sk + '-' + currentGbSubject + '-' + currentQuarter + '">' + (fg !== null ? '<span class="final-badge ' + bc + '">' + fg + '</span>' : '—') + '</td>' +
+        '<td id="rem-' + sk + '-' + currentGbSubject + '-' + currentQuarter + '" style="font-size:11px;font-weight:600;color:' + gradeColor(fg) + '">' + getRemarks(fg) + '</td>' +
+        '<td class="gb-subj-grade-col"><span class="subj-saved-badge' + (stuSubjGrade !== '—' ? ' has-grade' : '') + '">' + stuSubjGrade + '</span></td>' +
+        '</tr>';
+    }
+  }
+  makeRows(r.male, 'male'); makeRows(r.female, 'female');
+  if (!tbody.innerHTML) tbody.innerHTML = '<tr><td colspan="' + TOTAL_COLS + '" class="gb-no-results">' + (currentGbSubject ? 'No students found.' : '<div class="gb-no-subject-state">📚 No subject selected yet.<br><small>Click <strong>＋ Add Subject</strong> above to get started.</small></div>') + '</td></tr>';
+}
+
+// ══ UPDATED handleScoreInput ══
+function handleScoreInput(input) {
+  var sk = input.getAttribute('data-sk'), subj = input.getAttribute('data-subj'), qtr = input.getAttribute('data-qtr'), comp = input.getAttribute('data-comp'), val = input.value;
+  var mx = parseInt(input.getAttribute('data-max') || '100');
+  if (val !== '' && Number(val) > mx) { input.value = mx; val = String(mx); }
+  setScore(sk, subj, qtr, comp, val);
+  var sc = getScores(sk, subj, qtr), fg = computeDetailedGrade(sc);
+  var fgEl = g('fg-' + sk + '-' + subj + '-' + qtr), remEl = g('rem-' + sk + '-' + subj + '-' + qtr);
+  if (fgEl) fgEl.innerHTML = (fg !== null) ? '<span class="final-badge ' + badgeClass(fg) + '">' + fg + '</span>' : '—';
+  if (remEl) { remEl.textContent = getRemarks(fg); remEl.style.color = gradeColor(fg); }
+  saveGrades();
+}
+
+// ══ UPDATED saveQuarterGrades ══
+function saveQuarterGrades(classKey) {
+  var r = getDynamicRoster(classKey, currentGradeLevel); var saved = 0, skipped = 0;
+  function process(entries, genderLabel) {
+    for (var i = 0; i < entries.length; i++) {
+      var sk = getScoreStoreKey(classKey, genderLabel, i), sc = getScores(sk, currentGbSubject, currentQuarter), fg = computeDetailedGrade(sc);
+      if (fg === null) { skipped++; continue; }
+      setRosterGrade(classKey, entries[i].name, currentGbSubject, currentQuarter, fg); saved++;
+    }
+  }
+  process(r.male, 'male'); process(r.female, 'female');
+  saveDB(); saveGrades();
+  showToast(saved > 0 ? '💾 [' + currentGbSubject + '] ' + currentQuarter.toUpperCase() + ' — ' + saved + ' grade(s) saved! ✅' : '⚠️ No scores found. Enter scores first.', saved > 0 ? 'success' : 'warning');
+  renderGradebook(currentFolder, currentSection);
+}
+
 // ══ INIT ══
 (function init(){
   setRole("student");setSuRole("student");
