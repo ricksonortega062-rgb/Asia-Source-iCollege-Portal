@@ -1,7 +1,7 @@
 // Asia Source iCollege — Portal Script (with Configurable Max Scores)
 var LS_KEY="asiasource_db_v5",LS_GRADES="asiasource_grades_v5",LS_NOTIFS="asiasource_notifs_v5",LS_INVITES="asiasource_invites_v5";
 var LS_SCORE_SETTINGS="asiasource_score_settings_v1";
-var LS_TCH_SUBJECTS="asiasource_tch_subjects_v1"; // per-teacher: key = LS_TCH_SUBJECTS + "_" + teacherId
+var LS_TCH_SUBJECTS="asiasource_tch_subjects_v1";
 
 // ══ FULL SUBJECT CATALOG (Senior High School) ══
 var ALL_SHS_SUBJECTS = {
@@ -156,10 +156,25 @@ function loadDB(){try{var r=localStorage.getItem(LS_KEY);if(r){var p=JSON.parse(
 function saveDB(){try{localStorage.setItem(LS_KEY,JSON.stringify(DB));}catch(e){}}
 function saveGrades(){try{localStorage.setItem(LS_GRADES,JSON.stringify({scoreStore:scoreStore,crStore:crStore,attStore:attStore,rosterGrades:rosterGrades}));}catch(e){}}
 function loadGrades(){try{var r=localStorage.getItem(LS_GRADES);if(r){var d=JSON.parse(r);scoreStore=d.scoreStore||{};crStore=d.crStore||{};attStore=d.attStore||{};rosterGrades=d.rosterGrades||{};}}catch(e){}}
+
+// ══ INVITE / NOTIFICATION HELPERS (Fixed) ══
 function loadNotifs(){try{var r=localStorage.getItem(LS_NOTIFS);return r?JSON.parse(r):{};}catch(e){return{};}}
 function saveNotifs(n){try{localStorage.setItem(LS_NOTIFS,JSON.stringify(n));}catch(e){}}
+
 function loadInvites(){try{var r=localStorage.getItem(LS_INVITES);return r?JSON.parse(r):[];}catch(e){return[];}}
 function saveInvites(inv){try{localStorage.setItem(LS_INVITES,JSON.stringify(inv));}catch(e){}}
+
+// FIX: Strictly filter by status — no stale data
+function getApprovedSubjects(studentId){
+  return loadInvites().filter(function(inv){
+    return inv.studentId===studentId && inv.status==="approved";
+  });
+}
+function getPendingSubjects(studentId){
+  return loadInvites().filter(function(inv){
+    return inv.studentId===studentId && inv.status==="pending";
+  });
+}
 
 var DEFAULT_DB={
   students:[{
@@ -222,8 +237,6 @@ var DEFAULT_DB={
   ],
   monthColors:["#7a0006","#b45309","#166534","#1e40af","#6b21a8","#0f766e","#92400e","#9d174d","#1e3a5f","#374151","#065f46","#4c1d95"]
 };
-
-function isIct12(strand,grade){ return false; }
 
 function getSubjectsForFolder(strand,grade){ return DB.subjects; }
 function getCrSubjectsForFolder(strand,grade){
@@ -291,8 +304,17 @@ function applyUserTheme(){
   ["dmNavIcon","dmNavIcon2"].forEach(function(id){var e=g(id);if(e)e.textContent=icon;});
 }
 
-// ══ FIX: goHome should just show login page, NOT logout ══
+// ══ goHome — refreshes dashboard if logged in ══
 function goHome() {
+  if (currentUser) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (currentRole === 'student') {
+      loadStudentDash(currentUser);
+    } else {
+      loadTeacherDash(currentUser);
+    }
+    return;
+  }
   var stuDash = document.getElementById('studentDash');
   var tchDash = document.getElementById('teacherDash');
   var loginPage = document.getElementById('loginPage');
@@ -300,7 +322,6 @@ function goHome() {
   if (tchDash) tchDash.classList.add('hidden');
   if (loginPage) loginPage.classList.remove('hidden');
   if (typeof applyLoginDark === 'function') applyLoginDark();
-  // currentUser is preserved — so navigating back from login re-enters the dash
 }
 
 function switchAuth(tab){
@@ -367,7 +388,7 @@ function handleLogin(e){
       for(var i2=0;i2<DB.students.length;i2++)if(DB.students[i2].emailUser===eu){emailExists=true;break;}
       showAlert("alertBox",emailExists?"Wrong password. Use your birthday: YYYY-MM-DD":"Email not found. Check spelling or sign up first.");return;
     }
-    currentUser=stu;hideEl("loginPage");applyUserTheme();loadStudentDash(stu);showEl("studentDash");
+    currentUser=stu;hideEl("loginPage");applyUserTheme();loadStudentDash(stu);showEl("studentDash");startStudentPolling();
   }else{
     var tch=null;
     for(var j=0;j<DB.teachers.length;j++){if(DB.teachers[j].emailUser===eu&&DB.teachers[j].pass===pw){tch=DB.teachers[j];break;}}
@@ -380,6 +401,7 @@ function handleLogin(e){
   }
 }
 function logout(){
+  stopStudentPolling();
   hideEl("studentDash");hideEl("teacherDash");showEl("loginPage");
   currentUser=null;g("userId").value="";g("password").value="";
   applyLoginDark();
@@ -589,8 +611,6 @@ function markTeacherNotifRead(teacherId,notifId){
   localStorage.setItem(key,JSON.stringify(list));
 }
 function getUnreadTeacherNotifCount(teacherId){return getTeacherNotifs(teacherId).filter(function(n){return!n.read;}).length;}
-function getApprovedSubjects(studentId){return loadInvites().filter(function(inv){return inv.studentId===studentId&&inv.status==="approved";});}
-function getPendingSubjects(studentId){return loadInvites().filter(function(inv){return inv.studentId===studentId&&inv.status==="pending";});}
 
 function loadStudentPhoto(studentId){try{return localStorage.getItem("asiasource_photo_"+studentId);}catch(e){return null;}}
 function applyStudentPhoto(studentId,dataUrl){
@@ -646,7 +666,7 @@ function removeProfilePhoto(){
   showToast("🗑️ Photo removed.","warning");
 }
 
-// Student Dashboard
+// ══ Student Score Types ══
 var SCORE_TYPES=[
   {key:"quiz1",label:"Quiz 1",group:"quiz"},{key:"quiz2",label:"Quiz 2",group:"quiz"},{key:"quiz3",label:"Quiz 3",group:"quiz"},
   {key:"act1",label:"Activity 1",group:"activity"},{key:"act2",label:"Activity 2",group:"activity"},{key:"act3",label:"Activity 3",group:"activity"},
@@ -654,10 +674,66 @@ var SCORE_TYPES=[
   {key:"exam",label:"Exam",group:"exam"}
 ];
 
-function getSubjectsForStudent(stu){ return DB.subjects; }
+// FIX: Build subject objects directly from approved invites + catalog
+// DB.subjects is always empty — subjects live in the invite system
+function getSubjectsForStudent(stu){
+  var CAT_META={
+    "Core Subjects":        {color:"#3b82f6",icon:"📗"},
+    "Applied Subjects":     {color:"#8b5cf6",icon:"🔧"},
+    "Specialized — ABM":   {color:"#f59e0b",icon:"💼"},
+    "Specialized — HUMSS": {color:"#ec4899",icon:"🎭"},
+    "Specialized — STEM":  {color:"#10b981",icon:"🔬"},
+    "Specialized — TVL":   {color:"#f97316",icon:"⚙️"}
+  };
+  function metaForSubject(name){
+    for(var cat in ALL_SHS_SUBJECTS){
+      if(ALL_SHS_SUBJECTS[cat].indexOf(name)>=0){
+        return CAT_META[cat]||{color:"#e8000f",icon:"📚"};
+      }
+    }
+    return {color:"#e8000f",icon:"📚"};
+  }
+  var result=[], seen={};
+  // 1. From approved invites (has teacher info)
+  var invites=loadInvites();
+  for(var i=0;i<invites.length;i++){
+    var inv=invites[i];
+    if(inv.studentId!==stu.id||inv.status!=="approved"||seen[inv.subjectName])continue;
+    seen[inv.subjectName]=true;
+    var m=metaForSubject(inv.subjectName);
+    result.push({name:inv.subjectName,icon:m.icon,color:m.color,teacher:inv.teacherName||"",sem:null});
+  }
+  // 2. From student.approvedSubjects (seed / teacher-added)
+  var seed=stu.approvedSubjects||[];
+  for(var j=0;j<seed.length;j++){
+    if(seen[seed[j]])continue;
+    seen[seed[j]]=true;
+    var m2=metaForSubject(seed[j]);
+    result.push({name:seed[j],icon:m2.icon,color:m2.color,teacher:"",sem:null});
+  }
+  return result;
+}
 
+// ══ STUDENT DASHBOARD (Fixed: always re-syncs from localStorage) ══
 function loadStudentDash(stu){
-  for(var i=0;i<DB.students.length;i++){if(DB.students[i].id===stu.id){currentUser=DB.students[i];stu=currentUser;break;}}
+  // ALWAYS reload DB and invites from localStorage before rendering
+  // This ensures cross-tab changes (teacher approvals) are picked up
+  var freshDB=loadDB();
+  if(freshDB&&Array.isArray(freshDB.students)){
+    DB.students=freshDB.students;
+    DB.teachers=freshDB.teachers;
+  }
+  // Re-find the student from the freshly loaded DB
+  if(stu&&stu.id){
+    for(var si=0;si<DB.students.length;si++){
+      if(DB.students[si].id===stu.id){
+        currentUser=DB.students[si];
+        stu=currentUser;
+        break;
+      }
+    }
+  }
+
   g("stuName").textContent=stu.name;
   g("stuProfileName").textContent=stu.name;
   g("stuProfileEmail").textContent=stu.email+"@asiasourceicollege.edu.ph";
@@ -670,44 +746,55 @@ function loadStudentDash(stu){
     strandEl.innerHTML=(glShort?'<span style="background:'+glColor+'22;border:1px solid '+glColor+'55;color:'+glColor+';border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;margin-right:4px;">'+glShort+'</span>':"")+
       (DB.strandFull[stu.strand]||stu.strand);
   }
-  var subjectsForStu=getSubjectsForStudent(stu);
-  var approved=getApprovedSubjects(stu.id).map(function(inv){return inv.subjectName;});
-  var pending=getPendingSubjects(stu.id).map(function(inv){return inv.subjectName;});
-  var seedApproved=stu.approvedSubjects||[];
-  var allApproved=seedApproved.concat(approved.filter(function(s){return seedApproved.indexOf(s)<0;}));
+
+  // FIX: Build subject list from approved invites (DB.subjects is always empty)
+  var subjectsForStu = getSubjectsForStudent(stu);
+  var pendingInvites = getPendingSubjects(stu.id);
+  var allApproved    = subjectsForStu.map(function(s){return s.name;});
+
   var list=g("subjectList");list.innerHTML="";
-  pending.forEach(function(subj){
-    var sub=null;for(var i=0;i<subjectsForStu.length;i++){if(subjectsForStu[i].name===subj){sub=subjectsForStu[i];break;}}
-    var icon=sub?sub.icon:subj.slice(0,3).toUpperCase(),teacher=sub?sub.teacher:"";
-    list.innerHTML+='<div class="subject-card pending-card"><div class="subject-left"><div class="subject-icon" style="opacity:.5;">'+icon+'</div><div><div class="sub-name">'+subj+'</div><div class="sub-teacher">'+teacher+'</div></div></div><div class="subject-grade"><div class="pending-badge">⏳ Waiting Approval</div></div></div>';
-  });
-  if(allApproved.length===0&&pending.length===0){
-    list.innerHTML='<div class="no-subjects-msg"><div class="no-sub-icon">📚</div><div class="no-sub-text">You have no subjects yet.</div><div class="no-sub-hint">Click the button below to add your subjects.</div></div>';
+
+  // Empty state
+  if(pendingInvites.length===0&&allApproved.length===0){
+    list.innerHTML='<div class="no-subjects-msg"><div class="no-sub-icon">\u{1F4DA}</div><div class="no-sub-text">You have no subjects yet.</div><div class="no-sub-hint">Click the button below to add your subjects.</div></div>';
   }
-  for(var si=0;si<subjectsForStu.length;si++){
-    var sub=subjectsForStu[si];
-    if(allApproved.indexOf(sub.name)<0)continue;
+
+  // Pending cards
+  pendingInvites.forEach(function(inv){
+    var CAT_ICONS={"Core Subjects":"\u{1F4D7}","Applied Subjects":"\u{1F527}","Specialized \u2014 ABM":"\u{1F4BC}","Specialized \u2014 HUMSS":"\u{1F3AD}","Specialized \u2014 STEM":"\u{1F52C}","Specialized \u2014 TVL":"\u2699\uFE0F"};
+    var icon="\u{1F4DA}";
+    for(var cat in ALL_SHS_SUBJECTS){if(ALL_SHS_SUBJECTS[cat].indexOf(inv.subjectName)>=0){icon=CAT_ICONS[cat]||"\u{1F4DA}";break;}}
+    var teacherTxt=inv.teacherName?"Teacher: "+inv.teacherName:"";
+    list.innerHTML+='<div class="subject-card pending-card"><div class="subject-left"><div class="subject-icon" style="opacity:.5;">'+icon+'</div><div><div class="sub-name">'+inv.subjectName+'</div><div class="sub-teacher">'+teacherTxt+'</div></div></div><div class="subject-grade"><div class="pending-badge">\u23F3 Waiting Approval</div></div></div>';
+  });
+
+  // Approved subject cards
+  for(var si2=0;si2<subjectsForStu.length;si2++){
+    var sub=subjectsForStu[si2];
+    if(!stu.grades)stu.grades={};
     var gr=stu.grades[sub.name]||{},fg=avgGrade(gr.q1,gr.q2,gr.q3,gr.q4),passed=fg&&fg>=75;
-    var semBadge="";
-    if(sub.sem){semBadge='<div style="margin-bottom:4px;"><span class="sem-badge sem-badge-'+sub.sem+'">'+(sub.sem===1?"1st Semester":"2nd Semester")+'</span></div>';}
-    list.innerHTML+='<div class="subject-card" onclick="openSubjectDetail(\''+sub.name.replace(/'/g,"\\'")+'\')">'+'<div class="subject-left"><div class="subject-icon">'+sub.icon+'</div>'+
-      '<div>'+semBadge+'<div class="sub-name">'+sub.name+'</div><div class="sub-teacher">'+sub.teacher+'</div></div></div>'+
+    list.innerHTML+='<div class="subject-card" onclick="openSubjectDetail(\''+sub.name.replace(/'/g,"\\'")+'\')">'+
+      '<div class="subject-left">'+
+      '<div class="subject-icon" style="background:'+sub.color+'22;border:1.5px solid '+sub.color+'55;color:'+sub.color+'">'+sub.icon+'</div>'+
+      '<div><div class="sub-name">'+sub.name+'</div>'+
+      '<div class="sub-teacher">'+(sub.teacher?"Teacher: "+sub.teacher:"")+'</div></div></div>'+
       '<div class="subject-grade"><div class="grade-num">'+(fg||"-")+'</div><div class="grade-label">Final</div>'+
       '<div class="grade-pill '+(passed?"pill-pass":"pill-fail")+'">'+getRemarks(fg)+'</div></div></div>';
   }
+
   var tbody=g("gradeCardBody");tbody.innerHTML="";
   var gwaSum=0,gwaCount=0;
   var sem1Subj=[],sem2Subj=[],noSemSubj=[];
   for(var k=0;k<subjectsForStu.length;k++){
     var s=subjectsForStu[k];
-    if(allApproved.indexOf(s.name)<0)continue;
     if(s.sem===1)sem1Subj.push(s);else if(s.sem===2)sem2Subj.push(s);else noSemSubj.push(s);
   }
-  function renderSemRows(list,semLabel,semColor){
-    if(list.length===0)return;
+
+  function renderSemRows(list2,semLabel,semColor){
+    if(list2.length===0)return;
     if(semLabel)tbody.innerHTML+='<tr><td colspan="5" style="background:'+semColor+'22;color:'+semColor+';font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid '+semColor+'33;">'+semLabel+'</td></tr>';
-    for(var ki=0;ki<list.length;ki++){
-      var sk=list[ki];
+    for(var ki=0;ki<list2.length;ki++){
+      var sk=list2[ki];
       if(allApproved.indexOf(sk.name)<0)continue;
       var gr2=stu.grades[sk.name]||{},q1=gr2.q1||"",q2=gr2.q2||"",q3=gr2.q3||"",q4=gr2.q4||"";
       var sem1g=avgGrade(q1,q2),sem2g=avgGrade(q3,q4);
@@ -826,7 +913,7 @@ function enhanceStudentScorePanels(subName){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ADD SUBJECT MODAL — REDESIGNED PREMIUM UI (Student)
+// ADD SUBJECT MODAL
 // ══════════════════════════════════════════════════════════════════
 var selectedSubjectForAdd=null,selectedTeacherForAdd=null;
 
@@ -838,6 +925,7 @@ function openAddSubjectModal(){
 function closeAddSubjectModal(){g("addSubjectModal").classList.add("hidden");document.body.style.overflow="";}
 
 function renderAddSubjectStep1(){
+  // FIX: Use fresh storage reads
   var approved=getApprovedSubjects(currentUser.id).map(function(inv){return inv.subjectName;});
   var pending=getPendingSubjects(currentUser.id).map(function(inv){return inv.subjectName;});
   var seed=currentUser.approvedSubjects||[];
@@ -849,7 +937,6 @@ function renderAddSubjectStep1(){
   }
 
   var html='<div class="asj-step1">';
-  // Compact stats banner
   html+='<div class="asj-stats-bar">';
   html+='<div class="asj-stat"><span class="asj-stat-num">'+totalAvail+'</span><span class="asj-stat-lbl">Available</span></div>';
   html+='<div class="asj-stat-div"></div>';
@@ -857,15 +944,11 @@ function renderAddSubjectStep1(){
   html+='<div class="asj-stat-div"></div>';
   html+='<div class="asj-stat"><span class="asj-stat-num" style="color:#f0a050;">'+(pending.length)+'</span><span class="asj-stat-lbl">Pending</span></div>';
   html+='</div>';
-
-  // Search bar
   html+='<div class="asj-search-wrap">';
   html+='<span class="asj-search-icon">🔍</span>';
   html+='<input class="asj-search-input" type="text" id="asjSearch" placeholder="Search subjects..." oninput="filterAsjCatalog()">';
   html+='<button class="asj-search-clear hidden" id="asjSearchClear" onclick="clearAsjSearch()">✕</button>';
   html+='</div>';
-
-  // Catalog
   html+='<div class="asj-catalog" id="asjCatalog">';
   html+=buildAsjCatalog(taken,'');
   html+='</div>';
@@ -972,31 +1055,75 @@ function selectSubjectFromCatalog(subj){
   g("addSubjectContent").innerHTML=html;
 }
 
-function selectSubject(subj,idx){ selectSubjectFromCatalog(subj); }
-
 function selectTeacherForSubject(tid,temail,el){
   selectedTeacherForAdd=tid;
   document.querySelectorAll(".asj-teacher-card").forEach(function(c){c.classList.remove("selected");});
   el.classList.add("selected");
   var btn=g("asjSubmitBtn");if(btn){btn.disabled=false;}
 }
+
+// ══ FIXED: submitSubjectRequest ══
 function submitSubjectRequest(){
   if(!selectedSubjectForAdd||!selectedTeacherForAdd)return;
-  var teacher=null;for(var i=0;i<DB.teachers.length;i++){if(DB.teachers[i].id===selectedTeacherForAdd){teacher=DB.teachers[i];break;}}
+  var teacher=null;
+  for(var i=0;i<DB.teachers.length;i++){
+    if(DB.teachers[i].id===selectedTeacherForAdd){teacher=DB.teachers[i];break;}
+  }
   if(!teacher)return;
+
   var invitesList=loadInvites();
+
+  // Block if already PENDING
   for(var j=0;j<invitesList.length;j++){
-    if(invitesList[j].studentId===currentUser.id&&invitesList[j].subjectName===selectedSubjectForAdd&&invitesList[j].status==="pending"){
-      showToast("⚠️ You already have a pending request for "+selectedSubjectForAdd,"warning");closeAddSubjectModal();return;
+    if(invitesList[j].studentId===currentUser.id&&
+       invitesList[j].subjectName===selectedSubjectForAdd&&
+       invitesList[j].status==="pending"){
+      showToast("⚠️ You already have a pending request for "+selectedSubjectForAdd,"warning");
+      closeAddSubjectModal();
+      return;
     }
   }
-  var invite={id:"INV-"+Date.now(),studentId:currentUser.id,studentName:currentUser.name,studentEmail:currentUser.emailUser,subjectName:selectedSubjectForAdd,teacherId:teacher.id,teacherEmail:teacher.emailUser,teacherName:teacher.name,status:"pending",timestamp:new Date().toISOString()};
-  invitesList.push(invite);saveInvites(invitesList);
-  addNotifForTeacher(teacher.id,{type:"subject_request",inviteId:invite.id,studentName:currentUser.name,studentEmail:currentUser.emailUser,studentId:currentUser.id,subjectName:selectedSubjectForAdd,message:currentUser.name+" requested to enroll in "+selectedSubjectForAdd});
+
+  // Block if already APPROVED
+  var approvedNames=getApprovedSubjects(currentUser.id).map(function(inv){return inv.subjectName;});
+  var seedApproved=currentUser.approvedSubjects||[];
+  var allApproved=seedApproved.concat(approvedNames.filter(function(s){return seedApproved.indexOf(s)<0;}));
+  if(allApproved.indexOf(selectedSubjectForAdd)>=0){
+    showToast("✅ You are already enrolled in "+selectedSubjectForAdd,"success");
+    closeAddSubjectModal();
+    return;
+  }
+
+  var invite={
+    id:"INV-"+Date.now(),
+    studentId:currentUser.id,
+    studentName:currentUser.name,
+    studentEmail:currentUser.emailUser,
+    subjectName:selectedSubjectForAdd,
+    teacherId:teacher.id,
+    teacherEmail:teacher.emailUser,
+    teacherName:teacher.name,
+    status:"pending",
+    timestamp:new Date().toISOString()
+  };
+  invitesList.push(invite);
+  saveInvites(invitesList);
+
+  addNotifForTeacher(teacher.id,{
+    type:"subject_request",
+    inviteId:invite.id,
+    studentName:currentUser.name,
+    studentEmail:currentUser.emailUser,
+    studentId:currentUser.id,
+    subjectName:selectedSubjectForAdd,
+    message:currentUser.name+" requested to enroll in "+selectedSubjectForAdd
+  });
+
   closeAddSubjectModal();
   showPendingOverlay(selectedSubjectForAdd,teacher.name);
   setTimeout(function(){loadStudentDash(currentUser);},1000);
 }
+
 function showPendingOverlay(subj,teacherName){
   var el=document.createElement("div");el.id="pendingOverlay";
   el.innerHTML='<div class="pending-overlay-inner"><div class="pending-check-anim">✅</div><div class="pending-title">Request Sent!</div><div class="pending-msg">Please wait for approval from<br><strong>'+teacherName+'</strong></div><div class="pending-subj">'+subj+'</div></div>';
@@ -1082,9 +1209,7 @@ function updateTeacherNotifBadge(){
   if(badge){badge.textContent=count>0?count:"";badge.style.display=count>0?"flex":"none";}
 }
 
-// ══════════════════════════════════════════════════════════════════
-// TEACHER SUBJECT MANAGER — REDESIGNED PREMIUM UI
-// ══════════════════════════════════════════════════════════════════
+// ══ TEACHER SUBJECT MANAGER ══
 function openTchSubjectMgr(){
   renderTchSubjectMgr();
   g("tchSubjectMgrModal").classList.remove("hidden");
@@ -1095,125 +1220,244 @@ function closeTchSubjectMgr(){
   document.body.style.overflow="";
 }
 
-function renderTchSubjectMgr(){
-  var mySubjects=loadTchSubjects(currentUser.id);
+var _TSM3_STYLES_INJECTED = false;
 
-  var html='<div class="tsm-premium-wrap">';
-
-  // Header banner
-  html+='<div class="tsm-premium-header">';
-  html+='<div class="tsm-ph-icon">📚</div>';
-  html+='<div class="tsm-ph-info">';
-  html+='<div class="tsm-ph-title">Manage Your Subjects</div>';
-  html+='<div class="tsm-ph-sub">Add or remove subjects you\'re teaching this semester</div>';
-  html+='</div>';
-  html+='<div class="tsm-ph-count">';
-  html+='<span class="tsm-ph-count-num">'+mySubjects.length+'</span>';
-  html+='<span class="tsm-ph-count-lbl">subjects</span>';
-  html+='</div>';
-  html+='</div>';
-
-  // My subjects chips section
-  html+='<div class="tsm-premium-section">';
-  html+='<div class="tsm-ps-label"><span class="tsm-ps-dot tsm-dot-green"></span>Currently Teaching</div>';
-  if(mySubjects.length===0){
-    html+='<div class="tsm-ps-empty"><div class="tsm-ps-empty-icon">🗂️</div><div>No subjects added yet.<br><small>Search and add from the catalog below</small></div></div>';
-  } else {
-    html+='<div class="tsm-chips-grid">';
-    mySubjects.forEach(function(s,i){
-      var col=TCH_SUBJ_COLORS[i%TCH_SUBJ_COLORS.length];
-      html+='<div class="tsm-chip" style="--chip-color:'+col+';">';
-      html+='<span class="tsm-chip-dot" style="background:'+col+';"></span>';
-      html+='<span class="tsm-chip-name" title="'+s+'">'+s+'</span>';
-      html+='<button class="tsm-chip-remove" onclick="tchRemoveSubject(\''+s.replace(/'/g,"\\'")+'\')" title="Remove">✕</button>';
-      html+='</div>';
-    });
-    html+='</div>';
-  }
-  html+='</div>';
-
-  // Divider
-  html+='<div class="tsm-divider"><span>Subject Catalog</span></div>';
-
-  // Search
-  html+='<div class="tsm-premium-search-wrap">';
-  html+='<span class="tsm-search-icon">🔍</span>';
-  html+='<input class="tsm-premium-search" type="text" id="tsmSearch" placeholder="Search subjects to add..." oninput="filterTsmCatalog()">';
-  html+='</div>';
-
-  // Catalog
-  html+='<div class="tsm-catalog-scroll" id="tsmCatalog">';
-  html+=buildTsmCatalog(mySubjects,'');
-  html+='</div>';
-  html+='</div>';
-
-  g("tchSubjectMgrContent").innerHTML=html;
+function _injectTsm3Styles() {
+  if (_TSM3_STYLES_INJECTED || document.getElementById('tsm3-styles')) return;
+  _TSM3_STYLES_INJECTED = true;
+  var style = document.createElement('style');
+  style.id = 'tsm3-styles';
+  style.textContent = [
+    '#tchSubjectMgrModal .modal-card {max-width:740px !important;padding:0 !important;overflow:hidden !important;border-radius:26px !important;max-height:90vh !important;display:flex !important;flex-direction:column !important;}',
+    '#tchSubjectMgrModal .modal-card::before { display: none !important; }',
+    '#tchSubjectMgrModal .modal-close {position:absolute !important;top:14px !important;right:14px !important;z-index:60 !important;background:rgba(255,255,255,0.15) !important;border:1px solid rgba(255,255,255,0.25) !important;color:#fff !important;}',
+    '.tsm3-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;}',
+    '.tsm3-hero{position:relative;overflow:hidden;flex-shrink:0;}',
+    '.tsm3-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(30,64,175,.6) 0%,rgba(109,40,217,.35) 55%,rgba(5,10,30,.95) 100%);}',
+    '.tsm3-hero-bg::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 70% 90% at 75% 50%,rgba(59,130,246,.25),transparent);}',
+    '.tsm3-hero-bg::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6 30%,#a78bfa 65%,transparent);}',
+    '.tsm3-hero-inner{position:relative;z-index:1;display:flex;align-items:center;gap:18px;padding:24px 28px 22px;}',
+    '.tsm3-hero-icon{width:54px;height:54px;border-radius:16px;background:rgba(59,130,246,.2);border:1.5px solid rgba(59,130,246,.45);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 0 24px rgba(59,130,246,.25);}',
+    '.tsm3-hero-text{flex:1;}',
+    '.tsm3-hero-title{font-family:"Cinzel",serif;font-size:20px;font-weight:700;color:#fff;margin:0 0 4px;text-shadow:0 0 30px rgba(99,102,241,.6);}',
+    '.tsm3-hero-sub{font-size:12px;color:rgba(147,197,253,.65);margin:0;}',
+    '.tsm3-hero-counter{display:flex;flex-direction:column;align-items:center;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);border-radius:16px;padding:10px 20px;flex-shrink:0;}',
+    '.tsm3-counter-num{font-family:"Cinzel",serif;font-size:30px;font-weight:900;color:#93c5fd;line-height:1;transition:all .3s cubic-bezier(.34,1.56,.64,1);}',
+    '.tsm3-counter-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgba(147,197,253,.45);margin-top:3px;}',
+    '.tsm3-current-section{padding:14px 24px 12px;background:rgba(0,0,0,.35);border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;max-height:140px;overflow-y:auto;}',
+    '.tsm3-current-section::-webkit-scrollbar{width:3px;}',
+    '.tsm3-current-section::-webkit-scrollbar-thumb{background:rgba(59,130,246,.4);border-radius:2px;}',
+    '.tsm3-section-label{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.35);margin-bottom:10px;}',
+    '.tsm3-label-dot{width:6px;height:6px;border-radius:50%;}',
+    '.tsm3-dot-green{background:#22c55e;box-shadow:0 0 8px #22c55e;animation:tsm3GreenPulse 2s infinite;}',
+    '@keyframes tsm3GreenPulse{0%,100%{box-shadow:0 0 6px #22c55e;}50%{box-shadow:0 0 14px #22c55e;}}',
+    '.tsm3-chips-flow{display:flex;flex-wrap:wrap;gap:7px;}',
+    '.tsm3-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px 5px 7px;border-radius:20px;border:1.5px solid rgba(255,255,255,.1);background:rgba(0,0,0,.35);animation:tsm3ChipIn .28s cubic-bezier(.34,1.56,.64,1);max-width:230px;transition:border-color .2s;}',
+    '.tsm3-chip:hover{border-color:rgba(239,68,68,.4);}',
+    '@keyframes tsm3ChipIn{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}',
+    '.tsm3-chip-color{width:8px;height:8px;border-radius:50%;flex-shrink:0;}',
+    '.tsm3-chip-text{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:175px;}',
+    '.tsm3-chip-x{width:18px;height:18px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:rgba(255,255,255,.45);font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:monospace;padding:0;}',
+    '.tsm3-chip-x:hover{background:rgba(239,68,68,.55);color:#fff;transform:scale(1.15);}',
+    '.tsm3-empty-chips{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.015);border:1px dashed rgba(255,255,255,.08);}',
+    '.tsm3-empty-chips-icon{font-size:24px;opacity:.35;}',
+    '.tsm3-empty-chips-text{font-size:12px;color:rgba(255,255,255,.3);line-height:1.6;}',
+    '.tsm3-empty-chips-text span{font-size:10.5px;}',
+    '.tsm3-divider{display:flex;align-items:center;gap:12px;padding:11px 24px;background:rgba(0,0,0,.2);flex-shrink:0;}',
+    '.tsm3-divider-line{flex:1;height:1px;background:rgba(255,255,255,.07);}',
+    '.tsm3-divider-text{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.22);white-space:nowrap;}',
+    '.tsm3-search-row{display:flex;align-items:center;gap:12px;padding:0 20px 12px;background:rgba(0,0,0,.2);flex-shrink:0;}',
+    '.tsm3-search-box{position:relative;flex:1;}',
+    '.tsm3-search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.4;pointer-events:none;}',
+    '.tsm3-search-input{width:100%;padding:10px 36px 10px 40px;border:1.5px solid rgba(59,130,246,.22);border-radius:12px;font-family:"Outfit",sans-serif;font-size:13px;color:var(--text);background:rgba(0,0,0,.4);outline:none;transition:all .2s;box-sizing:border-box;}',
+    '.tsm3-search-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.14);background:rgba(0,0,0,.55);}',
+    '.tsm3-search-input::placeholder{color:rgba(255,255,255,.18);}',
+    '.tsm3-search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:var(--muted);transition:all .2s;}',
+    '.tsm3-search-clear:hover{background:rgba(239,68,68,.35);color:#fff;}',
+    '.tsm3-search-hint{font-size:11px;font-weight:600;color:rgba(255,255,255,.22);white-space:nowrap;flex-shrink:0;}',
+    '.tsm3-catalog{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 20px 20px;scrollbar-width:thin;scrollbar-color:rgba(59,130,246,.4) transparent;}',
+    '.tsm3-catalog::-webkit-scrollbar{width:4px;}',
+    '.tsm3-catalog::-webkit-scrollbar-thumb{background:rgba(59,130,246,.4);border-radius:2px;}',
+    '.tsm3-cat{margin-bottom:10px;border-radius:14px;border:1px solid rgba(255,255,255,.06);overflow:hidden;animation:tsm3CatIn .22s ease;}',
+    '@keyframes tsm3CatIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}',
+    '.tsm3-cat-hdr{display:flex;align-items:center;gap:8px;padding:10px 15px;background:rgba(0,0,0,.38);border-bottom:1px solid rgba(255,255,255,.05);}',
+    '.tsm3-cat-ico{font-size:15px;}',
+    '.tsm3-cat-name{flex:1;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;}',
+    '.tsm3-cat-cnt{font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px;}',
+    '.tsm3-cat-added{font-size:10px;font-weight:800;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:2px 9px;color:#34d399;}',
+    '.tsm3-cat-list{background:rgba(0,0,0,.08);}',
+    '.tsm3-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.022);transition:all .14s;gap:10px;}',
+    '.tsm3-item:last-child{border-bottom:none;}',
+    '.tsm3-item:hover{background:rgba(255,255,255,.025);padding-left:20px;}',
+    '.tsm3-item-added{background:rgba(16,185,129,.025);}',
+    '.tsm3-item-added .tsm3-item-name{color:rgba(255,255,255,.38);}',
+    '.tsm3-item-left{display:flex;align-items:center;gap:9px;flex:1;min-width:0;}',
+    '.tsm3-item-check{width:18px;height:18px;border-radius:50%;border:1.5px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;}',
+    '.tsm3-item-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid;flex-shrink:0;opacity:.4;}',
+    '.tsm3-item-name{font-size:12.5px;color:rgba(255,255,255,.78);flex:1;min-width:0;line-height:1.4;}',
+    '.tsm3-hl{background:rgba(255,184,0,.3);color:#fff;border-radius:3px;padding:0 2px;}',
+    '.tsm3-btn{padding:4px 12px;border-radius:20px;font-family:"Outfit",sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;border:1.5px solid;background:transparent;}',
+    '.tsm3-btn-add:hover{filter:brightness(1.3);transform:scale(1.04);}',
+    '.tsm3-btn-remove{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05);color:rgba(239,68,68,.7);}',
+    '.tsm3-btn-remove:hover{background:rgba(239,68,68,.18);color:#f87171;border-color:rgba(239,68,68,.5);}',
+    '.tsm3-no-results{text-align:center;padding:40px 20px;color:rgba(255,255,255,.28);font-size:13px;}'
+  ].join('\n');
+  document.head.appendChild(style);
 }
 
-var TSM_CAT_ICONS={"Core Subjects":"📗","Applied Subjects":"🔧","Specialized — ABM":"💼","Specialized — HUMSS":"🎭","Specialized — STEM":"🔬","Specialized — TVL":"⚙️"};
-var TSM_CAT_COLORS={"Core Subjects":"#3b82f6","Applied Subjects":"#8b5cf6","Specialized — ABM":"#f59e0b","Specialized — HUMSS":"#ec4899","Specialized — STEM":"#10b981","Specialized — TVL":"#f97316"};
+function _countAllSubjects(){
+  var c=0;
+  for(var cat in ALL_SHS_SUBJECTS)c+=ALL_SHS_SUBJECTS[cat].length;
+  return c;
+}
 
-function buildTsmCatalog(mySubjects,query){
-  var html="";
+function _buildTsm3Catalog(mySubjects,query){
+  var CAT_META={
+    "Core Subjects":{icon:"📗",color:"#3b82f6"},
+    "Applied Subjects":{icon:"🔧",color:"#8b5cf6"},
+    "Specialized — ABM":{icon:"💼",color:"#f59e0b"},
+    "Specialized — HUMSS":{icon:"🎭",color:"#ec4899"},
+    "Specialized — STEM":{icon:"🔬",color:"#10b981"},
+    "Specialized — TVL":{icon:"⚙️",color:"#f97316"}
+  };
   var q=query.toLowerCase().trim();
+  var html='',totalFound=0;
   for(var cat in ALL_SHS_SUBJECTS){
     var subs=ALL_SHS_SUBJECTS[cat];
     var filtered=q?subs.filter(function(s){return s.toLowerCase().indexOf(q)>=0;}):subs;
-    if(filtered.length===0)continue;
-    var col=TSM_CAT_COLORS[cat]||"#e8000f";
-    var ico=TSM_CAT_ICONS[cat]||"📚";
-    var addedCount=filtered.filter(function(s){return mySubjects.indexOf(s)>=0;}).length;
-    html+='<div class="tsm-cat-premium">';
-    html+='<div class="tsm-cat-premium-hdr" style="border-left-color:'+col+';">';
-    html+='<span class="tsm-cat-pico">'+ico+'</span>';
-    html+='<span class="tsm-cat-pname" style="color:'+col+';">'+cat+'</span>';
-    if(addedCount>0) html+='<span class="tsm-cat-padded" style="background:'+col+'22;border-color:'+col+'55;color:'+col+';">'+addedCount+' added</span>';
+    if(!filtered.length)continue;
+    totalFound+=filtered.length;
+    var meta=CAT_META[cat]||{icon:'📚',color:'#e8000f'};
+    var addedInCat=filtered.filter(function(s){return mySubjects.indexOf(s)>=0;}).length;
+    html+='<div class="tsm3-cat">';
+    html+='<div class="tsm3-cat-hdr" style="border-left:3px solid '+meta.color+';">';
+    html+='<span class="tsm3-cat-ico">'+meta.icon+'</span>';
+    html+='<span class="tsm3-cat-name" style="color:'+meta.color+';">'+cat+'</span>';
+    html+='<span class="tsm3-cat-cnt" style="background:'+meta.color+'18;color:'+meta.color+';">'+filtered.length+'</span>';
+    if(addedInCat>0)html+='<span class="tsm3-cat-added">✓ '+addedInCat+' added</span>';
     html+='</div>';
-    html+='<div class="tsm-cat-items-premium">';
+    html+='<div class="tsm3-cat-list">';
     filtered.forEach(function(s){
       var added=mySubjects.indexOf(s)>=0;
-      var sHl=s;
-      if(q){var qi=s.toLowerCase().indexOf(q);if(qi>=0)sHl=s.slice(0,qi)+'<mark class="asj-hl">'+s.slice(qi,qi+q.length)+'</mark>'+s.slice(qi+q.length);}
-      html+='<div class="tsm-item-premium'+(added?" tsm-item-added":"")+'">';
-      html+='<div class="tsm-item-status">'+(added?'<div class="tsm-item-check">✓</div>':'<div class="tsm-item-empty-dot" style="border-color:'+col+';"></div>')+'</div>';
-      html+='<span class="tsm-item-name">'+sHl+'</span>';
+      var nameHtml=s;
+      if(q){var qi=s.toLowerCase().indexOf(q);if(qi>=0)nameHtml=s.slice(0,qi)+'<mark class="tsm3-hl">'+s.slice(qi,qi+q.length)+'</mark>'+s.slice(qi+q.length);}
+      html+='<div class="tsm3-item'+(added?' tsm3-item-added':'')+'">';
+      html+='<div class="tsm3-item-left">';
       if(added){
-        html+='<button class="tsm-item-btn tsm-item-btn-remove" onclick="tchRemoveSubject(\''+s.replace(/'/g,"\\'")+'\')">Remove</button>';
-      } else {
-        html+='<button class="tsm-item-btn tsm-item-btn-add" style="border-color:'+col+'55;color:'+col+';" onclick="tchAddSubject(\''+s.replace(/'/g,"\\'")+'\')">＋ Add</button>';
+        html+='<div class="tsm3-item-check" style="background:'+meta.color+'18;border-color:'+meta.color+'55;color:'+meta.color+';">✓</div>';
+      }else{
+        html+='<div class="tsm3-item-dot" style="border-color:'+meta.color+'66;"></div>';
+      }
+      html+='<span class="tsm3-item-name">'+nameHtml+'</span>';
+      html+='</div>';
+      if(added){
+        html+='<button class="tsm3-btn tsm3-btn-remove" onclick="tsm3RemoveSubject(\''+s.replace(/'/g,"\\'")+'\')">✕ Remove</button>';
+      }else{
+        html+='<button class="tsm3-btn tsm3-btn-add" style="color:'+meta.color+';border-color:'+meta.color+'44;" onclick="tsm3AddSubject(\''+s.replace(/'/g,"\\'")+'\')">＋ Add</button>';
       }
       html+='</div>';
     });
     html+='</div></div>';
   }
-  if(!html){
-    html='<div class="tsm-empty-state"><div style="font-size:36px;margin-bottom:10px;opacity:.4;">🔍</div><div style="font-size:13px;color:var(--muted);">No subjects match "'+query+'"</div></div>';
+  if(!totalFound){
+    html='<div class="tsm3-no-results"><div style="font-size:38px;margin-bottom:12px;opacity:.35;">🔍</div><div>No subjects match "<strong>'+query+'"</strong></div></div>';
   }
   return html;
 }
 
-function filterTsmCatalog(){
-  var q=g("tsmSearch")?g("tsmSearch").value:"";
+function _tsm3RefreshUI(){
   var mySubjects=loadTchSubjects(currentUser.id);
-  var cat=g("tsmCatalog");if(cat)cat.innerHTML=buildTsmCatalog(mySubjects,q);
-}
-function tchAddSubject(subjectName){
-  addTchSubject(currentUser.id,subjectName);
-  renderTchSubjectMgr();
-  if(currentView==="gradebook"){currentGbSubject=currentGbSubject||subjectName;renderGradebook(currentFolder,currentSection);}
-  else if(currentView==="classrecord"){currentSubject=currentSubject||subjectName;renderClassRecord(currentFolder,currentSection);}
-  showToast("📚 "+subjectName+" added!","success");
-}
-function tchRemoveSubject(subjectName){
-  removeTchSubject(currentUser.id,subjectName);
-  if(currentGbSubject===subjectName){var list=loadTchSubjects(currentUser.id);currentGbSubject=list[0]||null;}
-  if(currentSubject===subjectName){var list2=loadTchSubjects(currentUser.id);currentSubject=list2[0]||null;}
-  renderTchSubjectMgr();
-  if(currentView==="gradebook")renderGradebook(currentFolder,currentSection);
-  else if(currentView==="classrecord")renderClassRecord(currentFolder,currentSection);
-  showToast("🗑️ "+subjectName+" removed.","warning");
+  var ctr=document.getElementById('tsm3CounterNum');
+  if(ctr)ctr.textContent=mySubjects.length;
+  var hint=document.querySelector('.tsm3-search-hint');
+  if(hint)hint.textContent=mySubjects.length+' of '+_countAllSubjects()+' added';
+  var section=document.querySelector('.tsm3-current-section');
+  if(section){
+    var chipsArea=section.querySelector('.tsm3-chips-flow, .tsm3-empty-chips');
+    var newHtml;
+    if(mySubjects.length===0){
+      newHtml='<div class="tsm3-empty-chips"><div class="tsm3-empty-chips-icon">🗂️</div><div class="tsm3-empty-chips-text">No subjects added yet<br><span>Search and add from the catalog below</span></div></div>';
+    }else{
+      newHtml='<div class="tsm3-chips-flow">';
+      mySubjects.forEach(function(s,i){
+        var col=TCH_SUBJ_COLORS[i%TCH_SUBJ_COLORS.length];
+        newHtml+='<div class="tsm3-chip"><span class="tsm3-chip-color" style="background:'+col+';"></span><span class="tsm3-chip-text" title="'+s+'">'+s+'</span><button class="tsm3-chip-x" onclick="tsm3RemoveSubject(\''+s.replace(/'/g,"\\'")+'\')">×</button></div>';
+      });
+      newHtml+='</div>';
+    }
+    if(chipsArea)chipsArea.outerHTML=newHtml;
+    else section.insertAdjacentHTML('beforeend',newHtml);
+  }
+  var q=document.getElementById('tsm3Search')?document.getElementById('tsm3Search').value:'';
+  var cat=document.getElementById('tsm3Catalog');
+  if(cat)cat.innerHTML=_buildTsm3Catalog(mySubjects,q);
 }
 
+function renderTchSubjectMgr(){
+  _injectTsm3Styles();
+  var mySubjects=loadTchSubjects(currentUser.id);
+  var html='<div class="tsm3-wrap">';
+  html+='<div class="tsm3-hero"><div class="tsm3-hero-bg"></div><div class="tsm3-hero-inner"><div class="tsm3-hero-icon">📚</div><div class="tsm3-hero-text"><h2 class="tsm3-hero-title">Manage Subjects</h2><p class="tsm3-hero-sub">Configure subjects you teach this semester</p></div><div class="tsm3-hero-counter"><span class="tsm3-counter-num" id="tsm3CounterNum">'+mySubjects.length+'</span><span class="tsm3-counter-lbl">teaching</span></div></div></div>';
+  html+='<div class="tsm3-current-section"><div class="tsm3-section-label"><span class="tsm3-label-dot tsm3-dot-green"></span>Currently Teaching</div>';
+  if(mySubjects.length===0){
+    html+='<div class="tsm3-empty-chips"><div class="tsm3-empty-chips-icon">🗂️</div><div class="tsm3-empty-chips-text">No subjects added yet<br><span>Search and add from the catalog below</span></div></div>';
+  }else{
+    html+='<div class="tsm3-chips-flow">';
+    mySubjects.forEach(function(s,i){
+      var col=TCH_SUBJ_COLORS[i%TCH_SUBJ_COLORS.length];
+      html+='<div class="tsm3-chip"><span class="tsm3-chip-color" style="background:'+col+';"></span><span class="tsm3-chip-text" title="'+s+'">'+s+'</span><button class="tsm3-chip-x" onclick="tsm3RemoveSubject(\''+s.replace(/'/g,"\\'")+'\')">×</button></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div class="tsm3-divider"><div class="tsm3-divider-line"></div><span class="tsm3-divider-text">Subject Catalog</span><div class="tsm3-divider-line"></div></div>';
+  html+='<div class="tsm3-search-row"><div class="tsm3-search-box"><span class="tsm3-search-ico">🔍</span><input class="tsm3-search-input" type="text" id="tsm3Search" placeholder="Search subjects..." oninput="tsm3Filter()"><button class="tsm3-search-clear hidden" id="tsm3Clear" onclick="tsm3ClearSearch()">✕</button></div><div class="tsm3-search-hint">'+mySubjects.length+' of '+_countAllSubjects()+' added</div></div>';
+  html+='<div class="tsm3-catalog" id="tsm3Catalog">'+_buildTsm3Catalog(mySubjects,'')+'</div>';
+  html+='</div>';
+  document.getElementById('tchSubjectMgrContent').innerHTML=html;
+}
+
+function tsm3Filter(){
+  var q=document.getElementById('tsm3Search')?document.getElementById('tsm3Search').value:'';
+  var clr=document.getElementById('tsm3Clear');
+  if(clr)clr.classList.toggle('hidden',!q);
+  var mySubjects=loadTchSubjects(currentUser.id);
+  var cat=document.getElementById('tsm3Catalog');
+  if(cat)cat.innerHTML=_buildTsm3Catalog(mySubjects,q);
+}
+
+function tsm3ClearSearch(){
+  var inp=document.getElementById('tsm3Search');
+  if(inp)inp.value='';
+  var clr=document.getElementById('tsm3Clear');
+  if(clr)clr.classList.add('hidden');
+  tsm3Filter();
+}
+
+function tsm3AddSubject(subjectName){
+  addTchSubject(currentUser.id,subjectName);
+  _tsm3RefreshUI();
+  if(currentView==='gradebook'){currentGbSubject=currentGbSubject||subjectName;renderGradebook(currentFolder,currentSection);}
+  else if(currentView==='classrecord'){currentSubject=currentSubject||subjectName;renderClassRecord(currentFolder,currentSection);}
+  showToast('📚 '+subjectName+' added!','success');
+}
+
+function tsm3RemoveSubject(subjectName){
+  removeTchSubject(currentUser.id,subjectName);
+  if(currentGbSubject===subjectName){var l=loadTchSubjects(currentUser.id);currentGbSubject=l[0]||null;}
+  if(currentSubject===subjectName){var l2=loadTchSubjects(currentUser.id);currentSubject=l2[0]||null;}
+  _tsm3RefreshUI();
+  if(currentView==='gradebook')renderGradebook(currentFolder,currentSection);
+  else if(currentView==='classrecord')renderClassRecord(currentFolder,currentSection);
+  showToast('🗑️ '+subjectName+' removed.','warning');
+}
+
+// Legacy aliases
+var tchAddSubject=tsm3AddSubject;
+var tchRemoveSubject=tsm3RemoveSubject;
+var filterTsmCatalog=tsm3Filter;
+
+// ══ TEACHER NOTIFICATIONS (Fixed) ══
 function openTeacherNotifPanel(){
   var notifs=getTeacherNotifs(currentUser.id);
   var html="";
@@ -1222,6 +1466,7 @@ function openTeacherNotifPanel(){
     notifs.forEach(function(n){
       var isRead=n.read;
       if(n.type==="subject_request"){
+        // FIX: Always re-read latest invite status from storage
         var allInvites=loadInvites(),inv=null;
         for(var i=0;i<allInvites.length;i++){if(allInvites[i].id===n.inviteId){inv=allInvites[i];break;}}
         var status=inv?inv.status:"pending";
@@ -1236,8 +1481,12 @@ function openTeacherNotifPanel(){
           var isG11=stuInfo.strand.indexOf("G11")>=0,glColor=isG11?"#0ea5e9":"#10b981";
           html+='<div class="notif-strand-row"><span class="gl-badge" style="background:'+glColor+'22;border-color:'+glColor+'55;color:'+glColor+';">'+gl+'</span><span class="strand-mini">'+sn+(sec?" - "+sec:"")+'</span></div>';
         }
-        if(status==="pending")html+='<div class="notif-actions"><button class="notif-approve" onclick="respondToInvite(\''+n.inviteId+'\',\'approved\',\''+n.id+'\')">✅ Approve</button><button class="notif-reject" onclick="respondToInvite(\''+n.inviteId+'\',\'rejected\',\''+n.id+'\')">✕ Decline</button></div>';
-        else html+='<div class="notif-status '+(status==="approved"?"notif-status-ok":"notif-status-no")+'">'+(status==="approved"?"✅ Approved":"✕ Declined")+'</div>';
+        // FIX: Show action buttons only if STILL pending; otherwise show final status badge
+        if(status==="pending"){
+          html+='<div class="notif-actions"><button class="notif-approve" onclick="respondToInvite(\''+n.inviteId+'\',\'approved\',\''+n.id+'\')">✅ Approve</button><button class="notif-reject" onclick="respondToInvite(\''+n.inviteId+'\',\'rejected\',\''+n.id+'\')">✕ Decline</button></div>';
+        }else{
+          html+='<div class="notif-status '+(status==="approved"?"notif-status-ok":"notif-status-no")+'">'+(status==="approved"?"✅ Approved":"✕ Declined")+'</div>';
+        }
         html+='</div></div>';
         markTeacherNotifRead(currentUser.id,n.id);
       }
@@ -1247,27 +1496,74 @@ function openTeacherNotifPanel(){
   if(panel){panel.innerHTML=html;panel.classList.toggle("hidden");}
   updateTeacherNotifBadge();
 }
+
+// ══ FIXED: respondToInvite ══
 function respondToInvite(inviteId,decision,notifId){
-  var invitesList=loadInvites(),inv=null;
-  for(var i=0;i<invitesList.length;i++){if(invitesList[i].id===inviteId){inv=invitesList[i];invitesList[i].status=decision;break;}}
+  // 1. Load fresh invites from localStorage
+  var invitesList=loadInvites();
+  var inv=null;
+  for(var i=0;i<invitesList.length;i++){
+    if(invitesList[i].id===inviteId){
+      inv=invitesList[i];
+      invitesList[i].status=decision;
+      break;
+    }
+  }
+  if(!inv){showToast("⚠️ Request not found.","warning");return;}
+
+  // 2. Save invites FIRST — fires storage event in student tab immediately
   saveInvites(invitesList);
-  if(inv&&decision==="approved"){
-    var stu=findStudentById(inv.studentId);
+
+  // 3. Re-load DB fresh from localStorage (student may have registered in another tab)
+  var freshDB=loadDB();
+  if(freshDB&&Array.isArray(freshDB.students)){
+    DB.students=freshDB.students;
+    DB.teachers=freshDB.teachers;
+  }
+
+  // 4. Update student approvedSubjects if approved
+  if(decision==="approved"){
+    var stu=null;
+    // Search fresh DB
+    for(var si=0;si<DB.students.length;si++){
+      if(DB.students[si].id===inv.studentId){stu=DB.students[si];break;}
+    }
     if(stu){
       ensureStudentGrades(stu);
       if(!stu.approvedSubjects)stu.approvedSubjects=[];
-      if(stu.approvedSubjects.indexOf(inv.subjectName)<0)stu.approvedSubjects.push(inv.subjectName);
-      addStudentToStaticRoster(stu);saveDB();
-      showToast("✅ "+inv.studentName+" approved for "+inv.subjectName+" — added to gradebook!","success");
+      if(stu.approvedSubjects.indexOf(inv.subjectName)<0){
+        stu.approvedSubjects.push(inv.subjectName);
+      }
+      addStudentToStaticRoster(stu);
+      saveDB();
+      showToast("✅ "+inv.studentName+" approved for "+inv.subjectName+"!","success");
+    }else{
+      // Student not found in DB — still save invites so student can see via invite query
+      showToast("✅ Approved! Student will see the subject when they refresh.","success");
     }
-  }else showToast("✕ Declined request for "+(inv?inv.subjectName:""),"warning");
-  openTeacherNotifPanel();updateTeacherNotifBadge();
+  }else{
+    showToast("✕ Declined: "+(inv.subjectName||""),"warning");
+  }
+
+  // 5. Refresh notification panel immediately
+  openTeacherNotifPanel();
+  updateTeacherNotifBadge();
+
+  // 6. If student is logged in the SAME tab (edge case), refresh directly
+  if(currentUser&&currentRole==="student"&&currentUser.id===inv.studentId){
+    for(var j=0;j<DB.students.length;j++){
+      if(DB.students[j].id===currentUser.id){currentUser=DB.students[j];break;}
+    }
+    loadStudentDash(currentUser);
+  }
+
+  // 7. Refresh teacher views
   if(currentView==="gradebook")renderGradebook(currentFolder,currentSection);
   else if(currentView==="classrecord")renderClassRecord(currentFolder,currentSection);
   else renderAttendance(currentFolder,currentSection);
 }
 
-// Add Student Modal
+// ══ Add Student Modal ══
 function openAddStudentModal(){renderAddStudentModal();g("addStudentModal").classList.remove("hidden");document.body.style.overflow="hidden";}
 function closeAddStudentModal(){g("addStudentModal").classList.add("hidden");document.body.style.overflow="";}
 function renderAddStudentModal(){
@@ -1315,7 +1611,7 @@ function addStudentToGradebook(stuId){
   else renderAttendance(currentFolder,currentSection);
 }
 
-// Folder / View
+// ══ Folder / View ══
 function openFolder(el){
   var strand=el.getAttribute("data-strand"),grade=el.getAttribute("data-grade")||"G11";
   var items=document.querySelectorAll(".strand-item");for(var i=0;i<items.length;i++)items[i].className="strand-item";
@@ -1361,128 +1657,122 @@ function showView(view){
 }
 
 // ══ SCORE SETTINGS MODAL ══
-function openScoreSettingsModal() {
+function openScoreSettingsModal(){
   renderScoreSettingsModal();
-  var modal = document.getElementById("scoreSettingsModal");
-  if (modal) { modal.classList.remove("hidden"); document.body.style.overflow = "hidden"; }
+  var modal=document.getElementById("scoreSettingsModal");
+  if(modal){modal.classList.remove("hidden");document.body.style.overflow="hidden";}
 }
-function closeScoreSettingsModal() {
-  var modal = document.getElementById("scoreSettingsModal");
-  if (modal) { modal.classList.add("hidden"); document.body.style.overflow = ""; }
+function closeScoreSettingsModal(){
+  var modal=document.getElementById("scoreSettingsModal");
+  if(modal){modal.classList.add("hidden");document.body.style.overflow="";}
 }
 
-function renderScoreSettingsModal() {
-  var groups = [
-    { id:"quiz", label:"📝 Quizzes", color:"#0ea5e9", items:[{key:"quiz1",label:"Quiz 1",desc:"1st quiz"},{key:"quiz2",label:"Quiz 2",desc:"2nd quiz"},{key:"quiz3",label:"Quiz 3",desc:"3rd quiz"}] },
-    { id:"activity", label:"🎯 Activities", color:"#10b981", items:[{key:"act1",label:"Activity 1",desc:"1st activity"},{key:"act2",label:"Activity 2",desc:"2nd activity"},{key:"act3",label:"Activity 3",desc:"3rd activity"}] },
-    { id:"project", label:"📁 Projects", color:"#f59e0b", items:[{key:"proj1",label:"Project 1",desc:"1st project"},{key:"proj2",label:"Project 2",desc:"2nd project"}] },
-    { id:"exam", label:"📄 Exam", color:"#e8000f", items:[{key:"exam",label:"Exam",desc:"Quarter exam"}] }
+function renderScoreSettingsModal(){
+  var groups=[
+    {id:"quiz",label:"📝 Quizzes",color:"#0ea5e9",items:[{key:"quiz1",label:"Quiz 1",desc:"1st quiz"},{key:"quiz2",label:"Quiz 2",desc:"2nd quiz"},{key:"quiz3",label:"Quiz 3",desc:"3rd quiz"}]},
+    {id:"activity",label:"🎯 Activities",color:"#10b981",items:[{key:"act1",label:"Activity 1",desc:"1st activity"},{key:"act2",label:"Activity 2",desc:"2nd activity"},{key:"act3",label:"Activity 3",desc:"3rd activity"}]},
+    {id:"project",label:"📁 Projects",color:"#f59e0b",items:[{key:"proj1",label:"Project 1",desc:"1st project"},{key:"proj2",label:"Project 2",desc:"2nd project"}]},
+    {id:"exam",label:"📄 Exam",color:"#e8000f",items:[{key:"exam",label:"Exam",desc:"Quarter exam"}]}
   ];
-
-  var html = '';
-  var totalWeight = groups.reduce(function(sum, grp) { return sum + getWeight(grp.id); }, 0);
-  var totalOk = totalWeight === 100;
-
-  html += '<div class="sm-weight-summary" id="smWeightSummary">';
-  html += '<div class="sm-weight-bar-wrap">';
-  groups.forEach(function(grp) {
-    var w = getWeight(grp.id);
-    html += '<div class="sm-weight-bar-seg" style="width:' + w + '%;background:' + grp.color + ';" title="' + grp.label + ': ' + w + '%"></div>';
+  var html='';
+  var totalWeight=groups.reduce(function(sum,grp){return sum+getWeight(grp.id);},0);
+  var totalOk=totalWeight===100;
+  html+='<div class="sm-weight-summary" id="smWeightSummary">';
+  html+='<div class="sm-weight-bar-wrap">';
+  groups.forEach(function(grp){
+    var w=getWeight(grp.id);
+    html+='<div class="sm-weight-bar-seg" style="width:'+w+'%;background:'+grp.color+';" title="'+grp.label+': '+w+'%"></div>';
   });
-  html += '</div>';
-  html += '<div class="sm-weight-total ' + (totalOk ? 'sm-weight-ok' : 'sm-weight-err') + '" id="smWeightTotal">';
-  html += 'Total Weight: <strong>' + totalWeight + '%</strong>' + (totalOk ? ' ✅' : ' ⚠️ Must equal 100%');
-  html += '</div></div>';
-
-  groups.forEach(function(grp) {
-    var w = getWeight(grp.id);
-    html += '<div class="sm-settings-section">';
-    html += '<div class="sm-settings-section-hdr" style="color:' + grp.color + ';">' + grp.label;
-    html += '<div class="sm-weight-input-wrap">';
-    html += '<span class="sm-weight-input-label">Weight:</span>';
-    html += '<input class="sm-weight-input" type="number" min="0" max="100" value="' + w + '" id="weight_' + grp.id + '" oninput="onWeightChange()" style="border-color:' + grp.color + '55;color:' + grp.color + ';">';
-    html += '<span class="sm-weight-pct-sign" style="color:' + grp.color + ';">%</span>';
-    html += '</div></div>';
-    html += '<div class="sm-settings-rows">';
-    grp.items.forEach(function(item) {
-      var currentMax = getMax(item.key);
-      html += '<div class="sm-settings-row"><div class="sm-settings-row-icon" style="color:' + grp.color + ';">✏️</div>';
-      html += '<div><div class="sm-settings-row-label">' + item.label + '</div><div class="sm-settings-row-sublabel">' + item.desc + '</div></div>';
-      html += '<div class="sm-settings-max-wrap"><span class="sm-settings-max-label">Max Score:</span>';
-      html += '<input class="sm-settings-max-input" type="number" min="1" max="9999" value="' + currentMax + '" id="setting_' + item.key + '" oninput="previewSettingChange(\'' + item.key + '\', this.value)">';
-      html += '</div></div>';
+  html+='</div>';
+  html+='<div class="sm-weight-total '+(totalOk?'sm-weight-ok':'sm-weight-err')+'" id="smWeightTotal">';
+  html+='Total Weight: <strong>'+totalWeight+'%</strong>'+(totalOk?' ✅':' ⚠️ Must equal 100%');
+  html+='</div></div>';
+  groups.forEach(function(grp){
+    var w=getWeight(grp.id);
+    html+='<div class="sm-settings-section">';
+    html+='<div class="sm-settings-section-hdr" style="color:'+grp.color+';">'+grp.label;
+    html+='<div class="sm-weight-input-wrap">';
+    html+='<span class="sm-weight-input-label">Weight:</span>';
+    html+='<input class="sm-weight-input" type="number" min="0" max="100" value="'+w+'" id="weight_'+grp.id+'" oninput="onWeightChange()" style="border-color:'+grp.color+'55;color:'+grp.color+';">';
+    html+='<span class="sm-weight-pct-sign" style="color:'+grp.color+';">%</span>';
+    html+='</div></div>';
+    html+='<div class="sm-settings-rows">';
+    grp.items.forEach(function(item){
+      var currentMax=getMax(item.key);
+      html+='<div class="sm-settings-row"><div class="sm-settings-row-icon" style="color:'+grp.color+';">✏️</div>';
+      html+='<div><div class="sm-settings-row-label">'+item.label+'</div><div class="sm-settings-row-sublabel">'+item.desc+'</div></div>';
+      html+='<div class="sm-settings-max-wrap"><span class="sm-settings-max-label">Max Score:</span>';
+      html+='<input class="sm-settings-max-input" type="number" min="1" max="9999" value="'+currentMax+'" id="setting_'+item.key+'" oninput="previewSettingChange(\''+item.key+'\', this.value)">';
+      html+='</div></div>';
     });
-    html += '</div></div>';
+    html+='</div></div>';
   });
-
-  var bodyEl = document.getElementById("scoreSettingsBody");
-  if (bodyEl) bodyEl.innerHTML = html;
+  var bodyEl=document.getElementById("scoreSettingsBody");
+  if(bodyEl)bodyEl.innerHTML=html;
 }
 
-function onWeightChange() {
-  var groups = ['quiz','activity','project','exam'];
-  var total = 0;
-  groups.forEach(function(g) { var inp = document.getElementById('weight_' + g); if (inp) total += Math.max(0, parseInt(inp.value) || 0); });
-  var totalEl = document.getElementById('smWeightTotal');
-  if (totalEl) {
-    totalEl.className = 'sm-weight-total ' + (total === 100 ? 'sm-weight-ok' : 'sm-weight-err');
-    totalEl.innerHTML = 'Total Weight: <strong>' + total + '%</strong>' + (total === 100 ? ' ✅' : ' ⚠️ Must equal 100%');
+function onWeightChange(){
+  var groups=['quiz','activity','project','exam'];
+  var total=0;
+  groups.forEach(function(g){var inp=document.getElementById('weight_'+g);if(inp)total+=Math.max(0,parseInt(inp.value)||0);});
+  var totalEl=document.getElementById('smWeightTotal');
+  if(totalEl){
+    totalEl.className='sm-weight-total '+(total===100?'sm-weight-ok':'sm-weight-err');
+    totalEl.innerHTML='Total Weight: <strong>'+total+'%</strong>'+(total===100?' ✅':' ⚠️ Must equal 100%');
   }
-  var barWrap = document.querySelector('.sm-weight-bar-wrap');
-  if (barWrap) {
-    var segs = barWrap.querySelectorAll('.sm-weight-bar-seg');
-    groups.forEach(function(grp, i) {
-      var inp = document.getElementById('weight_' + grp);
-      var w = inp ? Math.max(0, parseInt(inp.value) || 0) : 0;
-      if (segs[i]) segs[i].style.width = w + '%';
+  var barWrap=document.querySelector('.sm-weight-bar-wrap');
+  if(barWrap){
+    var segs=barWrap.querySelectorAll('.sm-weight-bar-seg');
+    groups.forEach(function(grp,i){
+      var inp=document.getElementById('weight_'+grp);
+      var w=inp?Math.max(0,parseInt(inp.value)||0):0;
+      if(segs[i])segs[i].style.width=w+'%';
     });
   }
 }
-function previewSettingChange(key, val) {
-  var input = document.getElementById("setting_" + key);
-  if (input) {
-    var n = parseInt(val);
-    input.style.borderColor = (n > 0) ? "#3b82f6" : "#e8000f";
-    input.style.color = (n > 0) ? "#fff" : "#ff8090";
+function previewSettingChange(key,val){
+  var input=document.getElementById("setting_"+key);
+  if(input){
+    var n=parseInt(val);
+    input.style.borderColor=(n>0)?"#3b82f6":"#e8000f";
+    input.style.color=(n>0)?"#fff":"#ff8090";
   }
 }
-function saveScoreSettingsFromModal() {
-  var keys = ["quiz1","quiz2","quiz3","act1","act2","act3","proj1","proj2","exam"];
-  var weightGroups = ['quiz','activity','project','exam'];
-  var errors = [], newSettings = {};
-  keys.forEach(function(key) {
-    var input = document.getElementById("setting_" + key);
-    if (!input) return;
-    var val = parseInt(input.value);
-    if (isNaN(val) || val < 1) errors.push(key);
-    else newSettings[key] = val;
+function saveScoreSettingsFromModal(){
+  var keys=["quiz1","quiz2","quiz3","act1","act2","act3","proj1","proj2","exam"];
+  var weightGroups=['quiz','activity','project','exam'];
+  var errors=[],newSettings={};
+  keys.forEach(function(key){
+    var input=document.getElementById("setting_"+key);
+    if(!input)return;
+    var val=parseInt(input.value);
+    if(isNaN(val)||val<1)errors.push(key);
+    else newSettings[key]=val;
   });
-  if (errors.length > 0) { showToast("⚠️ Please enter valid max scores (minimum 1) for all fields.", "warning"); return; }
-  var totalWeight = 0;
-  weightGroups.forEach(function(grp) {
-    var inp = document.getElementById('weight_' + grp);
-    var w = inp ? parseInt(inp.value) : 0;
-    if (isNaN(w) || w < 0) w = 0;
-    totalWeight += w;
-    newSettings['weight_' + grp] = w;
+  if(errors.length>0){showToast("⚠️ Please enter valid max scores (minimum 1) for all fields.","warning");return;}
+  var totalWeight=0;
+  weightGroups.forEach(function(grp){
+    var inp=document.getElementById('weight_'+grp);
+    var w=inp?parseInt(inp.value):0;
+    if(isNaN(w)||w<0)w=0;
+    totalWeight+=w;
+    newSettings['weight_'+grp]=w;
   });
-  if (totalWeight !== 100) { showToast("⚠️ Weights must total exactly 100%. Currently: " + totalWeight + "%", "warning"); return; }
-  for (var k in newSettings) scoreSettings[k] = newSettings[k];
+  if(totalWeight!==100){showToast("⚠️ Weights must total exactly 100%. Currently: "+totalWeight+"%","warning");return;}
+  for(var k in newSettings)scoreSettings[k]=newSettings[k];
   saveScoreSettings();
   closeScoreSettingsModal();
-  if (typeof renderGradebook === 'function') renderGradebook(currentFolder, currentSection);
-  showToast("⚙️ Score settings saved! Gradebook updated.", "success");
+  if(typeof renderGradebook==='function')renderGradebook(currentFolder,currentSection);
+  showToast("⚙️ Score settings saved! Gradebook updated.","success");
 }
-function resetScoreSettings() {
-  scoreSettings = JSON.parse(JSON.stringify(DEFAULT_SCORE_SETTINGS));
+function resetScoreSettings(){
+  scoreSettings=JSON.parse(JSON.stringify(DEFAULT_SCORE_SETTINGS));
   saveScoreSettings();
   renderScoreSettingsModal();
-  showToast("🔄 Score settings reset to defaults.", "warning");
+  showToast("🔄 Score settings reset to defaults.","warning");
 }
 
-// ══════════════════════════════════════════════════════════════════
-// GRADEBOOK — sticky header fix
-// ══════════════════════════════════════════════════════════════════
+// ══ GRADEBOOK ══
 function setGbQuarter(q,btn){
   currentQuarter=q;var btns=document.querySelectorAll(".qtr-btn");for(var i=0;i<btns.length;i++)btns[i].className="qtr-btn";
   btn.className="qtr-btn active";renderGradebook(currentFolder,currentSection);
@@ -1495,7 +1785,6 @@ function renderGradebook(strand,section){
   var key=strand+"-"+section;
   var crSubjs=getCrSubjectsForFolder(strand,currentGradeLevel);
   var crCols=getCrColorsForFolder(strand,currentGradeLevel);
-
   if(!currentGbSubject||crSubjs.indexOf(currentGbSubject)<0)currentGbSubject=crSubjs[0]||null;
   var toolbar=g("gbToolbar");
   if(toolbar){
@@ -1508,25 +1797,23 @@ function renderGradebook(strand,section){
     }
     var qtrs=["q1","q2","q3","q4"];
     if(qtrs.indexOf(currentQuarter)<0)currentQuarter=qtrs[0];
-
-    var settingsStripHtml = '<div class="gb-settings-strip">' +
-      '<span class="gb-settings-strip-label">⚙️ Max Scores:</span>' +
-      '<span class="gb-settings-chip" title="Quiz 1">Q1 <strong>/' + getMax("quiz1") + '</strong></span>' +
-      '<span class="gb-settings-chip" title="Quiz 2">Q2 <strong>/' + getMax("quiz2") + '</strong></span>' +
-      '<span class="gb-settings-chip" title="Quiz 3">Q3 <strong>/' + getMax("quiz3") + '</strong></span>' +
-      '<span class="gb-settings-chip-sep">·</span>' +
-      '<span class="gb-settings-chip" title="Activity 1">A1 <strong>/' + getMax("act1") + '</strong></span>' +
-      '<span class="gb-settings-chip" title="Activity 2">A2 <strong>/' + getMax("act2") + '</strong></span>' +
-      '<span class="gb-settings-chip" title="Activity 3">A3 <strong>/' + getMax("act3") + '</strong></span>' +
-      '<span class="gb-settings-chip-sep">·</span>' +
-      '<span class="gb-settings-chip" title="Project 1">P1 <strong>/' + getMax("proj1") + '</strong></span>' +
-      '<span class="gb-settings-chip" title="Project 2">P2 <strong>/' + getMax("proj2") + '</strong></span>' +
-      '<span class="gb-settings-chip-sep">·</span>' +
-      '<span class="gb-settings-chip" title="Exam">Exam <strong>/' + getMax("exam") + '</strong></span>' +
-      '<button class="gb-settings-edit-link" onclick="openScoreSettingsModal()">✏️ Edit</button>' +
+    var settingsStripHtml='<div class="gb-settings-strip">'+
+      '<span class="gb-settings-strip-label">⚙️ Max Scores:</span>'+
+      '<span class="gb-settings-chip" title="Quiz 1">Q1 <strong>/'+getMax("quiz1")+'</strong></span>'+
+      '<span class="gb-settings-chip" title="Quiz 2">Q2 <strong>/'+getMax("quiz2")+'</strong></span>'+
+      '<span class="gb-settings-chip" title="Quiz 3">Q3 <strong>/'+getMax("quiz3")+'</strong></span>'+
+      '<span class="gb-settings-chip-sep">·</span>'+
+      '<span class="gb-settings-chip" title="Activity 1">A1 <strong>/'+getMax("act1")+'</strong></span>'+
+      '<span class="gb-settings-chip" title="Activity 2">A2 <strong>/'+getMax("act2")+'</strong></span>'+
+      '<span class="gb-settings-chip" title="Activity 3">A3 <strong>/'+getMax("act3")+'</strong></span>'+
+      '<span class="gb-settings-chip-sep">·</span>'+
+      '<span class="gb-settings-chip" title="Project 1">P1 <strong>/'+getMax("proj1")+'</strong></span>'+
+      '<span class="gb-settings-chip" title="Project 2">P2 <strong>/'+getMax("proj2")+'</strong></span>'+
+      '<span class="gb-settings-chip-sep">·</span>'+
+      '<span class="gb-settings-chip" title="Exam">Exam <strong>/'+getMax("exam")+'</strong></span>'+
+      '<button class="gb-settings-edit-link" onclick="openScoreSettingsModal()">✏️ Edit</button>'+
       '</div>';
-
-    toolbar.innerHTML = settingsStripHtml +
+    toolbar.innerHTML=settingsStripHtml+
       '<div class="gb-toolbar-inner" style="margin-bottom:10px;"><span class="toolbar-lbl">Subject:</span><div class="subj-pills">'+pillsHtml+'<button class="subj-add-btn" onclick="openTchSubjectMgr()" title="Manage Subjects">＋ Add Subject</button></div></div>'+
       '<div class="gb-toolbar-inner"><span class="toolbar-lbl">Quarter:</span>'+
       '<div class="qtr-tabs">'+qtrs.map(function(q){return'<button class="qtr-btn'+(currentQuarter===q?" active":"")+"\" onclick=\"setGbQuarter('"+q+"',this)\">"+q.toUpperCase()+'</button>';}).join('')+'</div>'+
@@ -1537,24 +1824,19 @@ function renderGradebook(strand,section){
       '<button class="save-qtr-btn" onclick="saveQuarterGrades(\''+key+'\')">💾 Save '+currentQuarter.toUpperCase()+(currentGbSubject?' — '+currentGbSubject:'')+'</button>'+
       '</div>';
   }
-
-  // ── Update table header subject title ──
   var gbSubjTh=g("gbSubjTh");if(gbSubjTh)gbSubjTh.textContent=currentGbSubject+" Grade ("+currentQuarter.toUpperCase()+")";
-
-  // ── Update sub-headers with dynamic max ──
-  var subHeaders = document.querySelectorAll(".gb-sub-th");
-  if (subHeaders.length >= 9) {
-    subHeaders[0].innerHTML = 'Q1 <span class="gb-dynamic-max">/' + getMax("quiz1") + '</span>';
-    subHeaders[1].innerHTML = 'Q2 <span class="gb-dynamic-max">/' + getMax("quiz2") + '</span>';
-    subHeaders[2].innerHTML = 'Q3 <span class="gb-dynamic-max">/' + getMax("quiz3") + '</span>';
-    subHeaders[3].innerHTML = 'A1 <span class="gb-dynamic-max">/' + getMax("act1") + '</span>';
-    subHeaders[4].innerHTML = 'A2 <span class="gb-dynamic-max">/' + getMax("act2") + '</span>';
-    subHeaders[5].innerHTML = 'A3 <span class="gb-dynamic-max">/' + getMax("act3") + '</span>';
-    subHeaders[6].innerHTML = 'P1 <span class="gb-dynamic-max">/' + getMax("proj1") + '</span>';
-    subHeaders[7].innerHTML = 'P2 <span class="gb-dynamic-max">/' + getMax("proj2") + '</span>';
-    subHeaders[8].innerHTML = 'Exam <span class="gb-dynamic-max">/' + getMax("exam") + '</span>';
+  var subHeaders=document.querySelectorAll(".gb-sub-th");
+  if(subHeaders.length>=9){
+    subHeaders[0].innerHTML='Q1 <span class="gb-dynamic-max">/'+getMax("quiz1")+'</span>';
+    subHeaders[1].innerHTML='Q2 <span class="gb-dynamic-max">/'+getMax("quiz2")+'</span>';
+    subHeaders[2].innerHTML='Q3 <span class="gb-dynamic-max">/'+getMax("quiz3")+'</span>';
+    subHeaders[3].innerHTML='A1 <span class="gb-dynamic-max">/'+getMax("act1")+'</span>';
+    subHeaders[4].innerHTML='A2 <span class="gb-dynamic-max">/'+getMax("act2")+'</span>';
+    subHeaders[5].innerHTML='A3 <span class="gb-dynamic-max">/'+getMax("act3")+'</span>';
+    subHeaders[6].innerHTML='P1 <span class="gb-dynamic-max">/'+getMax("proj1")+'</span>';
+    subHeaders[7].innerHTML='P2 <span class="gb-dynamic-max">/'+getMax("proj2")+'</span>';
+    subHeaders[8].innerHTML='Exam <span class="gb-dynamic-max">/'+getMax("exam")+'</span>';
   }
-
   _renderGbRows(key);
 }
 
@@ -1626,7 +1908,7 @@ function saveQuarterGrades(classKey){
   renderGradebook(currentFolder,currentSection);
 }
 
-// Class Record
+// ══ Class Record ══
 function setCrSubject(subj){currentSubject=subj;renderClassRecord(currentFolder,currentSection);}
 function setCrSemFilter(sem){currentSemFilter=sem;currentSubject=null;renderClassRecord(currentFolder,currentSection);}
 
@@ -1701,7 +1983,7 @@ function handleCrInput(input){
 }
 function saveCrGrades(key){saveDB();saveGrades();showToast("💾 ["+currentSubject+"] all quarter grades saved! ✅","success");}
 
-// Attendance
+// ══ Attendance ══
 function renderAttendance(strand,section){
   var key=strand+"-"+section,r=getDynamicRoster(key,currentGradeLevel);
   if(!attStore[key])attStore[key]={};
@@ -1860,13 +2142,140 @@ function saveNewPassword(){
   showAlert("pmPassSuccess","✅ Password changed! Use your new password next login.","success");showToast("🔐 Password reset successful!","success");
 }
 
-
-
 document.addEventListener("click",function(e){
   var notifPanel=g("teacherNotifPanel");
   if(notifPanel&&!notifPanel.classList.contains("hidden")){
     var notifWrap=notifPanel.closest(".notif-wrap");
     if(notifWrap&&!notifWrap.contains(e.target))notifPanel.classList.add("hidden");
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// REAL-TIME CROSS-TAB SYNC
+// When teacher approves/rejects in another tab, student dashboard
+// auto-refreshes immediately via the storage event + polling fallback.
+// ══════════════════════════════════════════════════════════════════
+
+var _stuPollInterval = null;
+var _stuLastInviteSnapshot = null;
+
+function _getInviteSnapshot(studentId) {
+  var invites = loadInvites();
+  return JSON.stringify(
+    invites
+      .filter(function(inv) { return inv.studentId === studentId; })
+      .map(function(inv) { return { id: inv.id, status: inv.status, subjectName: inv.subjectName }; })
+  );
+}
+
+function _checkAndRefreshStudentDash() {
+  if (!currentUser || currentRole !== 'student') return;
+
+  // Re-sync DB from localStorage (in case teacher updated it in another tab)
+  var freshDB = loadDB();
+  if (freshDB && Array.isArray(freshDB.students)) {
+    DB.students = freshDB.students;
+    DB.teachers = freshDB.teachers;
+  }
+
+  var newSnapshot = _getInviteSnapshot(currentUser.id);
+
+  if (_stuLastInviteSnapshot === null) {
+    _stuLastInviteSnapshot = newSnapshot;
+    return;
+  }
+
+  if (newSnapshot === _stuLastInviteSnapshot) return;
+
+  // Something changed — figure out what
+  var oldData = [];
+  try { oldData = JSON.parse(_stuLastInviteSnapshot); } catch(e) {}
+  var newData = [];
+  try { newData = JSON.parse(newSnapshot); } catch(e) {}
+
+  // Update snapshot FIRST before async UI work
+  _stuLastInviteSnapshot = newSnapshot;
+
+  var newlyApproved = [];
+  var newlyRejected = [];
+
+  newData.forEach(function(inv) {
+    var old = null;
+    for (var i = 0; i < oldData.length; i++) {
+      if (oldData[i].id === inv.id) { old = oldData[i]; break; }
+    }
+    if (!old) {
+      // Brand new invite entry — not a status change
+      return;
+    }
+    if (old.status !== 'approved' && inv.status === 'approved') {
+      newlyApproved.push(inv.subjectName);
+    }
+    if (old.status !== 'rejected' && inv.status === 'rejected') {
+      newlyRejected.push(inv.subjectName);
+    }
+  });
+
+  // Re-sync currentUser from DB
+  for (var i = 0; i < DB.students.length; i++) {
+    if (DB.students[i].id === currentUser.id) {
+      currentUser = DB.students[i];
+      break;
+    }
+  }
+
+  // Refresh dashboard
+  loadStudentDash(currentUser);
+
+  // Show toasts
+  newlyApproved.forEach(function(subj) {
+    showToast('✅ "' + subj + '" approved! It now appears in your subjects.', 'success');
+  });
+  newlyRejected.forEach(function(subj) {
+    showToast('✕ "' + subj + '" enrollment request was declined.', 'warning');
+  });
+}
+
+function startStudentPolling() {
+  stopStudentPolling();
+  if (!currentUser || currentRole !== 'student') return;
+  _stuLastInviteSnapshot = _getInviteSnapshot(currentUser.id);
+  // Poll every 3 seconds
+  _stuPollInterval = setInterval(_checkAndRefreshStudentDash, 3000);
+}
+
+function stopStudentPolling() {
+  if (_stuPollInterval) {
+    clearInterval(_stuPollInterval);
+    _stuPollInterval = null;
+  }
+  _stuLastInviteSnapshot = null;
+}
+
+// storage event = instant cross-tab detection (same browser, different tabs)
+window.addEventListener('storage', function(e) {
+  if (!currentUser) return;
+
+  if (e.key === LS_INVITES && currentRole === 'student') {
+    // Re-read and compare
+    _checkAndRefreshStudentDash();
+  }
+
+  if (e.key === LS_KEY) {
+    var freshDB = loadDB();
+    if (freshDB && Array.isArray(freshDB.students)) {
+      DB.students = freshDB.students;
+      DB.teachers = freshDB.teachers;
+      if (currentRole === 'student') {
+        for (var i = 0; i < DB.students.length; i++) {
+          if (DB.students[i].id === currentUser.id) {
+            currentUser = DB.students[i];
+            break;
+          }
+        }
+        loadStudentDash(currentUser);
+      }
+    }
   }
 });
 document.addEventListener("keydown",function(e){
@@ -1876,527 +2285,7 @@ document.addEventListener("keydown",function(e){
   }
 });
 
-// ╔══════════════════════════════════════════════════════════════════════╗
-// ║  ASIA SOURCE iCOLLEGE — SCRIPT PATCH                                ║
-// ║  INSTRUCTIONS: Paste this entire block at the VERY BOTTOM of        ║
-// ║  your existing script.js file. It will override the old functions.  ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-
-// ══════════════════════════════════════════════════════════════════
-// FIX 1: goHome() — Brand click refreshes dashboard, not login
-// ══════════════════════════════════════════════════════════════════
-function goHome() {
-  if (currentUser) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (currentRole === 'student') {
-      loadStudentDash(currentUser);
-    } else {
-      loadTeacherDash(currentUser);
-    }
-    return;
-  }
-  var stuDash = document.getElementById('studentDash');
-  var tchDash = document.getElementById('teacherDash');
-  var loginPage = document.getElementById('loginPage');
-  if (stuDash) stuDash.classList.add('hidden');
-  if (tchDash) tchDash.classList.add('hidden');
-  if (loginPage) loginPage.classList.remove('hidden');
-  if (typeof applyLoginDark === 'function') applyLoginDark();
-}
-
-// ══════════════════════════════════════════════════════════════════
-// FIX 2: TEACHER SUBJECT MANAGER — Full Premium Redesign (TSM3)
-// ══════════════════════════════════════════════════════════════════
-
-var _TSM3_STYLES_INJECTED = false;
-
-function _injectTsm3Styles() {
-  if (_TSM3_STYLES_INJECTED || document.getElementById('tsm3-styles')) return;
-  _TSM3_STYLES_INJECTED = true;
-  var style = document.createElement('style');
-  style.id = 'tsm3-styles';
-  style.textContent = [
-    '/* TSM3 — Premium Subject Manager */',
-
-    /* Modal override */
-    '#tchSubjectMgrModal .modal-card {',
-    '  max-width: 740px !important;',
-    '  padding: 0 !important;',
-    '  overflow: hidden !important;',
-    '  border-radius: 26px !important;',
-    '  max-height: 90vh !important;',
-    '  display: flex !important;',
-    '  flex-direction: column !important;',
-    '}',
-    '#tchSubjectMgrModal .modal-card::before { display: none !important; }',
-    '#tchSubjectMgrModal .modal-close {',
-    '  position: absolute !important;',
-    '  top: 14px !important; right: 14px !important;',
-    '  z-index: 60 !important;',
-    '  background: rgba(255,255,255,0.15) !important;',
-    '  border: 1px solid rgba(255,255,255,0.25) !important;',
-    '  color: #fff !important;',
-    '}',
-
-    /* Wrap */
-    '.tsm3-wrap { display:flex; flex-direction:column; height:100%; overflow:hidden; }',
-
-    /* Hero */
-    '.tsm3-hero { position:relative; overflow:hidden; flex-shrink:0; }',
-    '.tsm3-hero-bg {',
-    '  position:absolute; inset:0;',
-    '  background:linear-gradient(135deg,rgba(30,64,175,.6) 0%,rgba(109,40,217,.35) 55%,rgba(5,10,30,.95) 100%);',
-    '}',
-    '.tsm3-hero-bg::before {',
-    '  content:""; position:absolute; inset:0;',
-    '  background:radial-gradient(ellipse 70% 90% at 75% 50%,rgba(59,130,246,.25),transparent);',
-    '}',
-    '.tsm3-hero-bg::after {',
-    '  content:""; position:absolute;',
-    '  bottom:0; left:0; right:0; height:2px;',
-    '  background:linear-gradient(90deg,transparent,#3b82f6 30%,#a78bfa 65%,transparent);',
-    '}',
-    '.tsm3-hero-inner {',
-    '  position:relative; z-index:1;',
-    '  display:flex; align-items:center; gap:18px;',
-    '  padding:24px 28px 22px;',
-    '}',
-    '.tsm3-hero-icon {',
-    '  width:54px; height:54px; border-radius:16px;',
-    '  background:rgba(59,130,246,.2);',
-    '  border:1.5px solid rgba(59,130,246,.45);',
-    '  display:flex; align-items:center; justify-content:center;',
-    '  font-size:26px; flex-shrink:0;',
-    '  box-shadow:0 0 24px rgba(59,130,246,.25);',
-    '}',
-    '.tsm3-hero-text { flex:1; }',
-    '.tsm3-hero-title {',
-    '  font-family:"Cinzel",serif;',
-    '  font-size:20px; font-weight:700; color:#fff;',
-    '  margin:0 0 4px;',
-    '  text-shadow:0 0 30px rgba(99,102,241,.6);',
-    '}',
-    '.tsm3-hero-sub { font-size:12px; color:rgba(147,197,253,.65); margin:0; }',
-    '.tsm3-hero-counter {',
-    '  display:flex; flex-direction:column; align-items:center;',
-    '  background:rgba(59,130,246,.12);',
-    '  border:1px solid rgba(59,130,246,.3);',
-    '  border-radius:16px; padding:10px 20px; flex-shrink:0;',
-    '}',
-    '.tsm3-counter-num {',
-    '  font-family:"Cinzel",serif; font-size:30px; font-weight:900;',
-    '  color:#93c5fd; line-height:1;',
-    '  transition:all .3s cubic-bezier(.34,1.56,.64,1);',
-    '}',
-    '.tsm3-counter-lbl {',
-    '  font-size:9px; font-weight:800; text-transform:uppercase;',
-    '  letter-spacing:1px; color:rgba(147,197,253,.45); margin-top:3px;',
-    '}',
-
-    /* Current subjects section */
-    '.tsm3-current-section {',
-    '  padding:14px 24px 12px;',
-    '  background:rgba(0,0,0,.35);',
-    '  border-bottom:1px solid rgba(255,255,255,.07);',
-    '  flex-shrink:0;',
-    '  max-height:140px; overflow-y:auto;',
-    '}',
-    '.tsm3-current-section::-webkit-scrollbar { width:3px; }',
-    '.tsm3-current-section::-webkit-scrollbar-thumb { background:rgba(59,130,246,.4); border-radius:2px; }',
-
-    '.tsm3-section-label {',
-    '  display:flex; align-items:center; gap:6px;',
-    '  font-size:9.5px; font-weight:800; text-transform:uppercase;',
-    '  letter-spacing:1.5px; color:rgba(255,255,255,.35);',
-    '  margin-bottom:10px;',
-    '}',
-    '.tsm3-label-dot { width:6px; height:6px; border-radius:50%; }',
-    '.tsm3-dot-green { background:#22c55e; box-shadow:0 0 8px #22c55e; animation:tsm3GreenPulse 2s infinite; }',
-    '@keyframes tsm3GreenPulse { 0%,100%{box-shadow:0 0 6px #22c55e;} 50%{box-shadow:0 0 14px #22c55e;} }',
-
-    '.tsm3-chips-flow { display:flex; flex-wrap:wrap; gap:7px; }',
-    '.tsm3-chip {',
-    '  display:inline-flex; align-items:center; gap:6px;',
-    '  padding:5px 8px 5px 7px; border-radius:20px;',
-    '  border:1.5px solid rgba(255,255,255,.1);',
-    '  background:rgba(0,0,0,.35);',
-    '  animation:tsm3ChipIn .28s cubic-bezier(.34,1.56,.64,1);',
-    '  max-width:230px; transition:border-color .2s;',
-    '}',
-    '.tsm3-chip:hover { border-color:rgba(239,68,68,.4); }',
-    '@keyframes tsm3ChipIn { from{transform:scale(.6);opacity:0;} to{transform:scale(1);opacity:1;} }',
-    '.tsm3-chip-color { width:8px; height:8px; border-radius:50%; flex-shrink:0; }',
-    '.tsm3-chip-text {',
-    '  font-size:11.5px; font-weight:600; color:rgba(255,255,255,.82);',
-    '  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:175px;',
-    '}',
-    '.tsm3-chip-x {',
-    '  width:18px; height:18px; border-radius:50%;',
-    '  border:none; background:rgba(255,255,255,.08);',
-    '  color:rgba(255,255,255,.45); font-size:13px; line-height:1;',
-    '  display:flex; align-items:center; justify-content:center;',
-    '  cursor:pointer; transition:all .15s; flex-shrink:0;',
-    '  font-family:monospace; padding:0;',
-    '}',
-    '.tsm3-chip-x:hover { background:rgba(239,68,68,.55); color:#fff; transform:scale(1.15); }',
-
-    '.tsm3-empty-chips {',
-    '  display:flex; align-items:center; gap:12px;',
-    '  padding:10px 14px; border-radius:12px;',
-    '  background:rgba(255,255,255,.015);',
-    '  border:1px dashed rgba(255,255,255,.08);',
-    '}',
-    '.tsm3-empty-chips-icon { font-size:24px; opacity:.35; }',
-    '.tsm3-empty-chips-text { font-size:12px; color:rgba(255,255,255,.3); line-height:1.6; }',
-    '.tsm3-empty-chips-text span { font-size:10.5px; }',
-
-    /* Divider */
-    '.tsm3-divider {',
-    '  display:flex; align-items:center; gap:12px;',
-    '  padding:11px 24px; background:rgba(0,0,0,.2); flex-shrink:0;',
-    '}',
-    '.tsm3-divider-line { flex:1; height:1px; background:rgba(255,255,255,.07); }',
-    '.tsm3-divider-text {',
-    '  font-size:9.5px; font-weight:800; text-transform:uppercase;',
-    '  letter-spacing:1.5px; color:rgba(255,255,255,.22); white-space:nowrap;',
-    '}',
-
-    /* Search */
-    '.tsm3-search-row {',
-    '  display:flex; align-items:center; gap:12px;',
-    '  padding:0 20px 12px; background:rgba(0,0,0,.2); flex-shrink:0;',
-    '}',
-    '.tsm3-search-box { position:relative; flex:1; }',
-    '.tsm3-search-ico {',
-    '  position:absolute; left:13px; top:50%; transform:translateY(-50%);',
-    '  font-size:14px; opacity:.4; pointer-events:none;',
-    '}',
-    '.tsm3-search-input {',
-    '  width:100%; padding:10px 36px 10px 40px;',
-    '  border:1.5px solid rgba(59,130,246,.22);',
-    '  border-radius:12px; font-family:"Outfit",sans-serif; font-size:13px;',
-    '  color:var(--text); background:rgba(0,0,0,.4); outline:none;',
-    '  transition:all .2s; box-sizing:border-box;',
-    '}',
-    '.tsm3-search-input:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.14); background:rgba(0,0,0,.55); }',
-    '.tsm3-search-input::placeholder { color:rgba(255,255,255,.18); }',
-    '.tsm3-search-clear {',
-    '  position:absolute; right:10px; top:50%; transform:translateY(-50%);',
-    '  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);',
-    '  border-radius:50%; width:22px; height:22px;',
-    '  display:flex; align-items:center; justify-content:center;',
-    '  cursor:pointer; font-size:10px; color:var(--muted); transition:all .2s;',
-    '}',
-    '.tsm3-search-clear:hover { background:rgba(239,68,68,.35); color:#fff; }',
-    '.tsm3-search-hint {',
-    '  font-size:11px; font-weight:600;',
-    '  color:rgba(255,255,255,.22); white-space:nowrap; flex-shrink:0;',
-    '}',
-
-    /* Scrollable catalog */
-    '.tsm3-catalog {',
-    '  flex:1; overflow-y:auto; overflow-x:hidden;',
-    '  padding:8px 20px 20px;',
-    '  scrollbar-width:thin; scrollbar-color:rgba(59,130,246,.4) transparent;',
-    '}',
-    '.tsm3-catalog::-webkit-scrollbar { width:4px; }',
-    '.tsm3-catalog::-webkit-scrollbar-thumb { background:rgba(59,130,246,.4); border-radius:2px; }',
-
-    /* Category groups */
-    '.tsm3-cat { margin-bottom:10px; border-radius:14px; border:1px solid rgba(255,255,255,.06); overflow:hidden; animation:tsm3CatIn .22s ease; }',
-    '@keyframes tsm3CatIn { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }',
-    '.tsm3-cat-hdr {',
-    '  display:flex; align-items:center; gap:8px;',
-    '  padding:10px 15px;',
-    '  background:rgba(0,0,0,.38);',
-    '  border-bottom:1px solid rgba(255,255,255,.05);',
-    '}',
-    '.tsm3-cat-ico { font-size:15px; }',
-    '.tsm3-cat-name { flex:1; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; }',
-    '.tsm3-cat-cnt { font-size:10px; font-weight:700; border-radius:20px; padding:2px 8px; }',
-    '.tsm3-cat-added {',
-    '  font-size:10px; font-weight:800;',
-    '  background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3);',
-    '  border-radius:20px; padding:2px 9px; color:#34d399;',
-    '}',
-
-    /* Subject items */
-    '.tsm3-cat-list { background:rgba(0,0,0,.08); }',
-    '.tsm3-item {',
-    '  display:flex; align-items:center; justify-content:space-between;',
-    '  padding:9px 14px;',
-    '  border-bottom:1px solid rgba(255,255,255,.022);',
-    '  transition:all .14s; gap:10px;',
-    '}',
-    '.tsm3-item:last-child { border-bottom:none; }',
-    '.tsm3-item:hover { background:rgba(255,255,255,.025); padding-left:20px; }',
-    '.tsm3-item-added { background:rgba(16,185,129,.025); }',
-    '.tsm3-item-added .tsm3-item-name { color:rgba(255,255,255,.38); }',
-    '.tsm3-item-left { display:flex; align-items:center; gap:9px; flex:1; min-width:0; }',
-    '.tsm3-item-check {',
-    '  width:18px; height:18px; border-radius:50%;',
-    '  border:1.5px solid; flex-shrink:0;',
-    '  display:flex; align-items:center; justify-content:center;',
-    '  font-size:9px; font-weight:900;',
-    '}',
-    '.tsm3-item-dot { width:8px; height:8px; border-radius:50%; border:1.5px solid; flex-shrink:0; opacity:.4; }',
-    '.tsm3-item-name { font-size:12.5px; color:rgba(255,255,255,.78); flex:1; min-width:0; line-height:1.4; }',
-    '.tsm3-hl { background:rgba(255,184,0,.3); color:#fff; border-radius:3px; padding:0 2px; }',
-
-    /* Action buttons */
-    '.tsm3-btn {',
-    '  padding:4px 12px; border-radius:20px;',
-    '  font-family:"Outfit",sans-serif; font-size:11px; font-weight:700;',
-    '  cursor:pointer; transition:all .15s; white-space:nowrap;',
-    '  flex-shrink:0; border:1.5px solid; background:transparent;',
-    '}',
-    '.tsm3-btn-add:hover { filter:brightness(1.3); transform:scale(1.04); }',
-    '.tsm3-btn-remove {',
-    '  border-color:rgba(239,68,68,.3);',
-    '  background:rgba(239,68,68,.05);',
-    '  color:rgba(239,68,68,.7);',
-    '}',
-    '.tsm3-btn-remove:hover { background:rgba(239,68,68,.18); color:#f87171; border-color:rgba(239,68,68,.5); }',
-
-    '.tsm3-no-results { text-align:center; padding:40px 20px; color:rgba(255,255,255,.28); font-size:13px; }'
-  ].join('\n');
-  document.head.appendChild(style);
-}
-
-function _countAllSubjects() {
-  var c = 0;
-  for (var cat in ALL_SHS_SUBJECTS) c += ALL_SHS_SUBJECTS[cat].length;
-  return c;
-}
-
-function _buildTsm3Catalog(mySubjects, query) {
-  var CAT_META = {
-    "Core Subjects":        { icon: "📗", color: "#3b82f6" },
-    "Applied Subjects":     { icon: "🔧", color: "#8b5cf6" },
-    "Specialized — ABM":   { icon: "💼", color: "#f59e0b" },
-    "Specialized — HUMSS": { icon: "🎭", color: "#ec4899" },
-    "Specialized — STEM":  { icon: "🔬", color: "#10b981" },
-    "Specialized — TVL":   { icon: "⚙️", color: "#f97316" }
-  };
-  var q = query.toLowerCase().trim();
-  var html = '', totalFound = 0;
-
-  for (var cat in ALL_SHS_SUBJECTS) {
-    var subs = ALL_SHS_SUBJECTS[cat];
-    var filtered = q ? subs.filter(function(s) { return s.toLowerCase().indexOf(q) >= 0; }) : subs;
-    if (!filtered.length) continue;
-    totalFound += filtered.length;
-
-    var meta = CAT_META[cat] || { icon: '📚', color: '#e8000f' };
-    var addedInCat = filtered.filter(function(s) { return mySubjects.indexOf(s) >= 0; }).length;
-
-    html += '<div class="tsm3-cat">';
-    html += '<div class="tsm3-cat-hdr" style="border-left:3px solid ' + meta.color + ';">';
-    html += '<span class="tsm3-cat-ico">' + meta.icon + '</span>';
-    html += '<span class="tsm3-cat-name" style="color:' + meta.color + ';">' + cat + '</span>';
-    html += '<span class="tsm3-cat-cnt" style="background:' + meta.color + '18;color:' + meta.color + ';">' + filtered.length + '</span>';
-    if (addedInCat > 0) html += '<span class="tsm3-cat-added">✓ ' + addedInCat + ' added</span>';
-    html += '</div>';
-    html += '<div class="tsm3-cat-list">';
-
-    filtered.forEach(function(s) {
-      var added = mySubjects.indexOf(s) >= 0;
-      var nameHtml = s;
-      if (q) {
-        var qi = s.toLowerCase().indexOf(q);
-        if (qi >= 0) nameHtml = s.slice(0, qi) + '<mark class="tsm3-hl">' + s.slice(qi, qi + q.length) + '</mark>' + s.slice(qi + q.length);
-      }
-      html += '<div class="tsm3-item' + (added ? ' tsm3-item-added' : '') + '">';
-      html += '<div class="tsm3-item-left">';
-      if (added) {
-        html += '<div class="tsm3-item-check" style="background:' + meta.color + '18;border-color:' + meta.color + '55;color:' + meta.color + ';">✓</div>';
-      } else {
-        html += '<div class="tsm3-item-dot" style="border-color:' + meta.color + '66;"></div>';
-      }
-      html += '<span class="tsm3-item-name">' + nameHtml + '</span>';
-      html += '</div>';
-      if (added) {
-        html += '<button class="tsm3-btn tsm3-btn-remove" onclick="tsm3RemoveSubject(\'' + s.replace(/'/g, "\\'") + '\')">✕ Remove</button>';
-      } else {
-        html += '<button class="tsm3-btn tsm3-btn-add" style="color:' + meta.color + ';border-color:' + meta.color + '44;" onclick="tsm3AddSubject(\'' + s.replace(/'/g, "\\'") + '\')">＋ Add</button>';
-      }
-      html += '</div>';
-    });
-
-    html += '</div></div>';
-  }
-
-  if (!totalFound) {
-    html = '<div class="tsm3-no-results"><div style="font-size:38px;margin-bottom:12px;opacity:.35;">🔍</div>' +
-           '<div>No subjects match "<strong>' + query + '</strong>"</div></div>';
-  }
-  return html;
-}
-
-function _tsm3RefreshUI() {
-  var mySubjects = loadTchSubjects(currentUser.id);
-
-  var ctr = document.getElementById('tsm3CounterNum');
-  if (ctr) ctr.textContent = mySubjects.length;
-
-  var hint = document.querySelector('.tsm3-search-hint');
-  if (hint) hint.textContent = mySubjects.length + ' of ' + _countAllSubjects() + ' added';
-
-  var section = document.querySelector('.tsm3-current-section');
-  if (section) {
-    var chipsArea = section.querySelector('.tsm3-chips-flow, .tsm3-empty-chips');
-    var newHtml;
-    if (mySubjects.length === 0) {
-      newHtml = '<div class="tsm3-empty-chips">' +
-        '<div class="tsm3-empty-chips-icon">🗂️</div>' +
-        '<div class="tsm3-empty-chips-text">No subjects added yet<br><span>Search and add from the catalog below</span></div>' +
-        '</div>';
-    } else {
-      newHtml = '<div class="tsm3-chips-flow">';
-      mySubjects.forEach(function(s, i) {
-        var col = TCH_SUBJ_COLORS[i % TCH_SUBJ_COLORS.length];
-        newHtml += '<div class="tsm3-chip">' +
-          '<span class="tsm3-chip-color" style="background:' + col + ';"></span>' +
-          '<span class="tsm3-chip-text" title="' + s + '">' + s + '</span>' +
-          '<button class="tsm3-chip-x" onclick="tsm3RemoveSubject(\'' + s.replace(/'/g, "\\'") + '\')">×</button>' +
-          '</div>';
-      });
-      newHtml += '</div>';
-    }
-    if (chipsArea) chipsArea.outerHTML = newHtml;
-    else section.insertAdjacentHTML('beforeend', newHtml);
-  }
-
-  var q = document.getElementById('tsm3Search') ? document.getElementById('tsm3Search').value : '';
-  var cat = document.getElementById('tsm3Catalog');
-  if (cat) cat.innerHTML = _buildTsm3Catalog(mySubjects, q);
-}
-
-function renderTchSubjectMgr() {
-  _injectTsm3Styles();
-  var mySubjects = loadTchSubjects(currentUser.id);
-
-  var html = '<div class="tsm3-wrap">';
-
-  // Hero header
-  html += '<div class="tsm3-hero">' +
-    '<div class="tsm3-hero-bg"></div>' +
-    '<div class="tsm3-hero-inner">' +
-      '<div class="tsm3-hero-icon">📚</div>' +
-      '<div class="tsm3-hero-text">' +
-        '<h2 class="tsm3-hero-title">Manage Subjects</h2>' +
-        '<p class="tsm3-hero-sub">Configure subjects you teach this semester</p>' +
-      '</div>' +
-      '<div class="tsm3-hero-counter">' +
-        '<span class="tsm3-counter-num" id="tsm3CounterNum">' + mySubjects.length + '</span>' +
-        '<span class="tsm3-counter-lbl">teaching</span>' +
-      '</div>' +
-    '</div>' +
-  '</div>';
-
-  // Currently teaching chips
-  html += '<div class="tsm3-current-section">';
-  html += '<div class="tsm3-section-label"><span class="tsm3-label-dot tsm3-dot-green"></span>Currently Teaching</div>';
-  if (mySubjects.length === 0) {
-    html += '<div class="tsm3-empty-chips">' +
-      '<div class="tsm3-empty-chips-icon">🗂️</div>' +
-      '<div class="tsm3-empty-chips-text">No subjects added yet<br><span>Search and add from the catalog below</span></div>' +
-      '</div>';
-  } else {
-    html += '<div class="tsm3-chips-flow">';
-    mySubjects.forEach(function(s, i) {
-      var col = TCH_SUBJ_COLORS[i % TCH_SUBJ_COLORS.length];
-      html += '<div class="tsm3-chip">' +
-        '<span class="tsm3-chip-color" style="background:' + col + ';"></span>' +
-        '<span class="tsm3-chip-text" title="' + s + '">' + s + '</span>' +
-        '<button class="tsm3-chip-x" onclick="tsm3RemoveSubject(\'' + s.replace(/'/g, "\\'") + '\')">×</button>' +
-        '</div>';
-    });
-    html += '</div>';
-  }
-  html += '</div>';
-
-  // Divider
-  html += '<div class="tsm3-divider">' +
-    '<div class="tsm3-divider-line"></div>' +
-    '<span class="tsm3-divider-text">Subject Catalog</span>' +
-    '<div class="tsm3-divider-line"></div>' +
-  '</div>';
-
-  // Search bar
-  html += '<div class="tsm3-search-row">' +
-    '<div class="tsm3-search-box">' +
-      '<span class="tsm3-search-ico">🔍</span>' +
-      '<input class="tsm3-search-input" type="text" id="tsm3Search" placeholder="Search subjects..." oninput="tsm3Filter()">' +
-      '<button class="tsm3-search-clear hidden" id="tsm3Clear" onclick="tsm3ClearSearch()">✕</button>' +
-    '</div>' +
-    '<div class="tsm3-search-hint">' + mySubjects.length + ' of ' + _countAllSubjects() + ' added</div>' +
-  '</div>';
-
-  // Scrollable catalog
-  html += '<div class="tsm3-catalog" id="tsm3Catalog">' +
-    _buildTsm3Catalog(mySubjects, '') +
-  '</div>';
-
-  html += '</div>';
-  document.getElementById('tchSubjectMgrContent').innerHTML = html;
-}
-
-function tsm3Filter() {
-  var q = document.getElementById('tsm3Search') ? document.getElementById('tsm3Search').value : '';
-  var clr = document.getElementById('tsm3Clear');
-  if (clr) clr.classList.toggle('hidden', !q);
-  var mySubjects = loadTchSubjects(currentUser.id);
-  var cat = document.getElementById('tsm3Catalog');
-  if (cat) cat.innerHTML = _buildTsm3Catalog(mySubjects, q);
-}
-
-function tsm3ClearSearch() {
-  var inp = document.getElementById('tsm3Search');
-  if (inp) inp.value = '';
-  var clr = document.getElementById('tsm3Clear');
-  if (clr) clr.classList.add('hidden');
-  tsm3Filter();
-}
-
-function tsm3AddSubject(subjectName) {
-  addTchSubject(currentUser.id, subjectName);
-  _tsm3RefreshUI();
-  if (currentView === 'gradebook') {
-    currentGbSubject = currentGbSubject || subjectName;
-    renderGradebook(currentFolder, currentSection);
-  } else if (currentView === 'classrecord') {
-    currentSubject = currentSubject || subjectName;
-    renderClassRecord(currentFolder, currentSection);
-  }
-  showToast('📚 ' + subjectName + ' added!', 'success');
-}
-
-function tsm3RemoveSubject(subjectName) {
-  removeTchSubject(currentUser.id, subjectName);
-  if (currentGbSubject === subjectName) {
-    var l = loadTchSubjects(currentUser.id);
-    currentGbSubject = l[0] || null;
-  }
-  if (currentSubject === subjectName) {
-    var l2 = loadTchSubjects(currentUser.id);
-    currentSubject = l2[0] || null;
-  }
-  _tsm3RefreshUI();
-  if (currentView === 'gradebook') renderGradebook(currentFolder, currentSection);
-  else if (currentView === 'classrecord') renderClassRecord(currentFolder, currentSection);
-  showToast('🗑️ ' + subjectName + ' removed.', 'warning');
-}
-
-// Legacy aliases — keeps old calls working
-var tchAddSubject = tsm3AddSubject;
-var tchRemoveSubject = tsm3RemoveSubject;
-var filterTsmCatalog = tsm3Filter;
-
-// ╔══════════════════════════════════════════════════════════════════════╗
-// ║  END OF PATCH — Save script.js and hard-refresh the page (Ctrl+Shift+R) ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-
+// ══ INIT ══
 (function init(){
   setRole("student");setSuRole("student");
   var container=document.getElementById("particles");
@@ -2434,4 +2323,3 @@ var filterTsmCatalog = tsm3Filter;
     }draw();
   })();
 })();
-
